@@ -1,0 +1,3 @@
+[submodule "payment-processors/authorize-net-cim/sdk"]
+	path = payment-processors/authorize-net-cim/sdk
+	url = https://dancameron@github.com/AuthorizeNet/sdk-php.git
