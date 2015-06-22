@@ -29,7 +29,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 
 
 	public static function get_instance() {
-		if ( !( isset( self::$instance ) && is_a( self::$instance, __CLASS__ ) ) ) {
+		if ( ! ( isset( self::$instance ) && is_a( self::$instance, __CLASS__ ) ) ) {
 			self::$instance = new self();
 		}
 		return self::$instance;
@@ -41,9 +41,9 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 
 	public function is_sandbox() {
 		if ( get_option( self::API_MODE_OPTION, self::MODE_TEST ) == self::MODE_LIVE ) {
-			return FALSE;
+			return false;
 		} else {
-			return TRUE;
+			return true;
 		}
 	}
 
@@ -119,7 +119,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	 * @return OBJECT
 	 */
 	public static function init_authrequest() {
-		if ( !( isset( self::$cim_request ) && is_a( self::$cim_request, 'AuthorizeNetCIM' ) ) ) {
+		if ( ! ( isset( self::$cim_request ) && is_a( self::$cim_request, 'AuthorizeNetCIM' ) ) ) {
 			require_once 'lib/AuthorizeNet.php';
 			self::$cim_request = new AuthorizeNetCIM;
 		}
@@ -163,29 +163,29 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 
 		// Create Profile
 		$profile_id = $this->create_profile( $checkout, $purchase );
-		if ( !$profile_id ) {
-			if ( GBS_DEV ) error_log( "could not create profile id: " . print_r( $profile_id, true ) );
-			return FALSE;
+		if ( ! $profile_id ) {
+			if ( GBS_DEV ) { error_log( 'could not create profile id: ' . print_r( $profile_id, true ) ); }
+			return false;
 		}
 
 		// Save shipping
 		$customer_address_id = $this->ship_to_list( $profile_id, $checkout, $purchase );
-		if ( !$customer_address_id ) {
-			if ( GBS_DEV ) error_log( "could not create shipping profile id: " . print_r( $customer_address_id, true ) );
-			return FALSE;
+		if ( ! $customer_address_id ) {
+			if ( GBS_DEV ) { error_log( 'could not create shipping profile id: ' . print_r( $customer_address_id, true ) ); }
+			return false;
 		}
 
 		// Check if CC was submitted
 		if (
 			// If the customer is submitting a CC from the review page the payment method isn't passed
-			( !isset( $_POST['gb_credit_payment_method'] ) && isset( $_POST['gb_credit_cc_cache'] ) ) ||
+			( ! isset( $_POST['gb_credit_payment_method'] ) && isset( $_POST['gb_credit_cc_cache'] ) ) ||
 			// If payment method isset, then confirm it's not CIM
 			( isset( $_POST['gb_credit_payment_method'] ) && ( $_POST['gb_credit_payment_method'] == 'cc' || $_POST['gb_credit_payment_method'] == 'credit' ) ) ) {
-			$payment_profile_id = NULL;
+			$payment_profile_id = null;
 		}
-		$new_profile_created = FALSE;
+		$new_profile_created = false;
 		// Since no CC was submitted determine what the payment profile id was selected, if any.
-		if ( !$payment_profile_id ) {
+		if ( ! $payment_profile_id ) {
 			// Check if the payment method was passed
 			if ( isset( $_POST['gb_credit_payment_method'] ) ) {
 				$payment_profile_id = $_POST['gb_credit_payment_method'];
@@ -195,17 +195,17 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 				$payment_profile_id = $checkout->cache['cim_payment_profile'];
 			}
 		}
-		if ( GBS_DEV ) error_log( "payment_profile_id: " . print_r( $payment_profile_id, true ) );
+		if ( GBS_DEV ) { error_log( 'payment_profile_id: ' . print_r( $payment_profile_id, true ) ); }
 		// Create a payment profile id.
-		if ( !is_numeric( $payment_profile_id ) ) {
+		if ( ! is_numeric( $payment_profile_id ) ) {
 			$payment_profile_id = $this->add_payment_profile( $profile_id, $customer_address_id, $checkout, $purchase );
-			$new_profile_created = TRUE;
-			if ( GBS_DEV ) error_log( "adding payment profile: " . print_r( $payment_profile_id, true ) );
+			$new_profile_created = true;
+			if ( GBS_DEV ) { error_log( 'adding payment profile: ' . print_r( $payment_profile_id, true ) ); }
 		}
 
-		if ( !$payment_profile_id ) {
+		if ( ! $payment_profile_id ) {
 			self::set_error_messages( 'Payment Error: 3742' );
-			return FALSE;
+			return false;
 		}
 
 		$transaction_id = 0; // If not reset than a PriorCapture
@@ -217,18 +217,18 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 			$transaction_response = $this->create_cart_transaction( $profile_id, $payment_profile_id, $customer_address_id, $checkout, $purchase );
 			$transaction_id = $transaction_response->transaction_id;
 
-			if ( GBS_DEV ) error_log( '----------CREATE Response----------' . print_r( $transaction_response, TRUE ) );
+			if ( GBS_DEV ) { error_log( '----------CREATE Response----------' . print_r( $transaction_response, true ) ); }
 
 			if ( $transaction_response->response_reason_code != 1 ) {
 				$this->set_error_messages( $transaction_response->response_reason_text );
-				return FALSE;
+				return false;
 			}
 
 			// remove the payment profile if store cc is unchecked
 			if ( $new_profile_created ) {
-				if ( !isset( $_POST['gb_credit_store_cc'] ) && !isset( $checkout->cache['gb_credit_store_cc'] ) ) {
+				if ( ! isset( $_POST['gb_credit_store_cc'] ) && ! isset( $checkout->cache['gb_credit_store_cc'] ) ) {
 					$this->remove_payment_profile( $payment_profile_id );
-					if ( GBS_DEV ) error_log( '----------DELETE PROFILE----------' . print_r( $payment_profile_id, TRUE ) );
+					if ( GBS_DEV ) { error_log( '----------DELETE PROFILE----------' . print_r( $payment_profile_id, true ) ); }
 				}
 			}
 
@@ -241,7 +241,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		$deal_info = array(); // creating purchased products array for payment below
 		foreach ( $purchase->get_products() as $item ) {
 			if ( isset( $item['payment_method'][$this->get_payment_method()] ) ) {
-				if ( !isset( $deal_info[$item['deal_id']] ) ) {
+				if ( ! isset( $deal_info[$item['deal_id']] ) ) {
 					$deal_info[$item['deal_id']] = array();
 				}
 				$deal_info[$item['deal_id']][] = $item;
@@ -274,8 +274,8 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 				'deals' => $deal_info,
 				'shipping_address' => $shipping_address
 			), Group_Buying_Payment::STATUS_AUTHORIZED );
-		if ( !$payment_id ) {
-			return FALSE;
+		if ( ! $payment_id ) {
+			return false;
 		}
 		$payment = Group_Buying_Payment::get_instance( $payment_id );
 		do_action( 'payment_authorized', $payment );
@@ -293,12 +293,12 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	 * @param Group_Buying_Purchase $purchase
 	 * @return array
 	 */
-	public function create_profile( Group_Buying_Checkouts $checkout, Group_Buying_Purchase $purchase, $force = FALSE ) {
+	public function create_profile( Group_Buying_Checkouts $checkout, Group_Buying_Purchase $purchase, $force = false ) {
 
 		$user = get_userdata( $purchase->get_user() );
-		$profile_id = self::get_customer_profile_id( $user->ID, TRUE );
+		$profile_id = self::get_customer_profile_id( $user->ID, true );
 		if ( $profile_id ) {
-			if ( GBS_DEV ) error_log( "create_profile return saved id: " . print_r( $new_customer_id, true ) );
+			if ( GBS_DEV ) { error_log( 'create_profile return saved id: ' . print_r( $new_customer_id, true ) ); }
 			return $profile_id;
 		}
 
@@ -310,7 +310,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 
 		// Request and response
 		$response = self::$cim_request->createCustomerProfile( $customerProfile );
-		if ( GBS_DEV ) error_log( "create customer profile response: " . print_r( $response, true ) );
+		if ( GBS_DEV ) { error_log( 'create customer profile response: ' . print_r( $response, true ) ); }
 
 		// Error check
 		if ( $response->isError() ) {
@@ -319,13 +319,13 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 			if ( strpos( $error_message, 'duplicate record with ID' ) ) {
 				preg_match( '~ID\s+(\S+)~', $error_message, $matches );
 				$new_customer_id = $matches[1];
-				if ( !is_numeric( $new_customer_id ) ) {
+				if ( ! is_numeric( $new_customer_id ) ) {
 					self::set_error_messages( gb__( 'A duplicate profile was found. Please contact the site administrator.' ) );
-					return FALSE;
+					return false;
 				}
 			} else {
 				self::set_error_messages( $error_message );
-				return FALSE;
+				return false;
 			}
 		}
 		else { // New customer profile was created.
@@ -334,7 +334,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		// Save profile id with the user for future reference.
 		update_user_meta( $user->ID, self::USER_META_PROFILE_ID, $new_customer_id );
 
-		if ( GBS_DEV ) error_log( "create_profile return: " . print_r( $new_customer_id, true ) );
+		if ( GBS_DEV ) { error_log( 'create_profile return: ' . print_r( $new_customer_id, true ) ); }
 
 		// Return
 		return $new_customer_id;
@@ -342,28 +342,28 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	}
 
 	public static function destroy_profile( $user_id = 0 ) {
-		if ( !$user_id ) {
+		if ( ! $user_id ) {
 			$user_id = get_current_user_id();
 		}
 		delete_user_meta( $user_id, self::USER_META_PROFILE_ID );
 	}
 
-	public static function get_customer_profile_id( $user_id = 0, $validate = FALSE ) {
-		if ( !$user_id ) {
+	public static function get_customer_profile_id( $user_id = 0, $validate = false ) {
+		if ( ! $user_id ) {
 			$user_id = get_current_user_id();
 		}
-		$profile_id = get_user_meta( $user_id, self::USER_META_PROFILE_ID, TRUE );
+		$profile_id = get_user_meta( $user_id, self::USER_META_PROFILE_ID, true );
 
 		if ( $validate && $profile_id ) {
 			$customer_profile = self::get_customer_profile( $profile_id );
 			// If the profile exists than return it's id
-			if ( !$customer_profile->isError() || $customer_profile->getMessageCode() != 'E00040' ) {
+			if ( ! $customer_profile->isError() || $customer_profile->getMessageCode() != 'E00040' ) {
 				return $profile_id;
 			}
 			// profile validation produced an error, remove it from this user and continue creating a new one.
 			$profile_id = 0;
 			self::destroy_profile( $user_id );
-			if ( GBS_DEV ) error_log( "get customer profile from create_profile resulted in an error: " . print_r( $response, true ) );
+			if ( GBS_DEV ) { error_log( 'get customer profile from create_profile resulted in an error: ' . print_r( $response, true ) ); }
 		}
 
 		return $profile_id;
@@ -376,10 +376,10 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	 * @return object
 	 */
 	public static function get_customer_profile( $profile_id = 0, $user_id = 0 ) {
-		if ( !$profile_id ) {
+		if ( ! $profile_id ) {
 			$profile_id = self::get_customer_profile_id( $user_id );
-			if ( !$profile_id ) {
-				return FALSE;
+			if ( ! $profile_id ) {
+				return false;
 			}
 		}
 		self::init_authrequest();
@@ -423,15 +423,15 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		}
 
 		$response = self::$cim_request->createCustomerShippingAddress( $profile_id, $address );
-		if ( GBS_DEV ) error_log( "shipping address response: " . print_r( $response, true ) );
+		if ( GBS_DEV ) { error_log( 'shipping address response: ' . print_r( $response, true ) ); }
 
 		$customer_address_id = $response->getCustomerAddressId();
 		// In case there's an error, get the address already in the profile
-		if ( !$customer_address_id ) {
+		if ( ! $customer_address_id ) {
 			// Get profile object
 			$customer_profile = self::get_customer_profile( $profile_id );
-			if ( !$customer_profile ) {
-				return FALSE;
+			if ( ! $customer_profile ) {
+				return false;
 			}
 			// Get address id
 			$customer_address_id = $customer_profile->getCustomerAddressId();
@@ -453,7 +453,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	public function add_payment_profile( $profile_id, $customer_address_id, Group_Buying_Checkouts $checkout, Group_Buying_Purchase $purchase ) {
 		// Create new customer profile
 		$paymentProfile = new AuthorizeNetPaymentProfile;
-		$paymentProfile->customerType = "individual";
+		$paymentProfile->customerType = 'individual';
 		$paymentProfile->billTo->firstName = $checkout->cache['billing']['first_name'];
 		$paymentProfile->billTo->lastName = $checkout->cache['billing']['last_name'];
 		$paymentProfile->billTo->address = $checkout->cache['billing']['street'];
@@ -466,7 +466,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 
 		// CC info
 		$paymentProfile->payment->creditCard->cardNumber = $this->cc_cache['cc_number'];
-		$paymentProfile->payment->creditCard->expirationDate = $this->cc_cache['cc_expiration_year'] . '-' . sprintf( "%02s", $this->cc_cache['cc_expiration_month'] );
+		$paymentProfile->payment->creditCard->expirationDate = $this->cc_cache['cc_expiration_year'] . '-' . sprintf( '%02s', $this->cc_cache['cc_expiration_month'] );
 		$paymentProfile->payment->creditCard->cardCode = $this->cc_cache['cc_cvv'];
 
 		// Create
@@ -475,22 +475,22 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		$payment_profile_id = $create_profile_response->getPaymentProfileId();
 
 		if ( GBS_DEV ) {
-			error_log( "createCustomerPaymentProfile create_profile_response: " . print_r( $create_profile_response, true ) );
-			error_log( "payment_profile_id: " . print_r( $payment_profile_id, true ) );
+			error_log( 'createCustomerPaymentProfile create_profile_response: ' . print_r( $create_profile_response, true ) );
+			error_log( 'payment_profile_id: ' . print_r( $payment_profile_id, true ) );
 		}
 
 		// Validate
 		$validation = $create_profile_response->getValidationResponse();
 		if ( $validation->error ) {
-			if ( GBS_DEV ) error_log( "validation response: " . print_r( $validation, true ) );
+			if ( GBS_DEV ) { error_log( 'validation response: ' . print_r( $validation, true ) ); }
 			self::set_error_messages( self::__( 'Credit Card Validation Declined.' ) );
-			return FALSE;
+			return false;
 		}
 
 		// In case no validation response is given but there's an error.
-		if ( !$payment_profile_id && isset( $create_profile_response->xml->messages->message->text ) ) {
+		if ( ! $payment_profile_id && isset( $create_profile_response->xml->messages->message->text ) ) {
 			self::set_error_messages( $create_profile_response->xml->messages->message->text );
-			return FALSE;
+			return false;
 		}
 
 		// Save the profile, even if it may be removed later
@@ -508,8 +508,8 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	public static function payment_card_profiles( $profile_id = 0 ) {
 		// Get profile object
 		$customer_profile = self::get_customer_profile( $profile_id );
-		if ( !$customer_profile )
-			return FALSE;
+		if ( ! $customer_profile ) {
+			return false; }
 		// Create an array of payment profile card numbers
 		$cards = array();
 		if ( isset( $customer_profile->xpath_xml->profile->paymentProfiles ) ) {
@@ -527,13 +527,13 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	 * @return
 	 */
 	public static function has_payment_profile( $user_id = 0 ) {
-		if ( !$user_id ) {
+		if ( ! $user_id ) {
 			$user_id = get_current_user_id();
 		}
 		if ( $profile_id = self::get_customer_profile_id( $user_id ) ) {
 			return count( self::payment_card_profiles( $profile_id ) );
 		}
-		return FALSE;
+		return false;
 	}
 
 	//////////////////
@@ -545,7 +545,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		// Vars
 		$cart = $checkout->get_cart();
 		$user = get_userdata( $purchase->get_user() );
-		$local_billing = $this->get_checkout_local( $checkout, $purchase, TRUE );
+		$local_billing = $this->get_checkout_local( $checkout, $purchase, true );
 
 		// Create Auth & Capture Transaction
 		$transaction = new AuthorizeNetTransaction;
@@ -576,10 +576,10 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		} else {
 			foreach ( $purchase->get_products() as $item ) {
 				if ( isset( $item['payment_method'][$this->get_payment_method()] ) ) {
-					if ( GBS_DEV ) error_log( "item: " . print_r( $item, true ) );
+					if ( GBS_DEV ) { error_log( 'item: ' . print_r( $item, true ) ); }
 					$deal = Group_Buying_Deal::get_instance( $item['deal_id'] );
 					$tax = $deal->get_tax( $local_billing );
-					$taxable = ( !empty( $tax ) && $tax > '0' ) ? 'true' : '' ;
+					$taxable = ( ! empty( $tax ) && $tax > '0' ) ? 'true' : '' ;
 
 					$lineItem              = new AuthorizeNetLineItem;
 					$lineItem->itemId      = $item['deal_id'];
@@ -594,12 +594,12 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 			}
 		}
 		$response = self::$cim_request->createCustomerProfileTransaction( 'AuthOnly', $transaction );
-		if ( GBS_DEV ) error_log( "createCustomerProfileTransaction response : " . print_r( $response, true ) );
+		if ( GBS_DEV ) { error_log( 'createCustomerProfileTransaction response : ' . print_r( $response, true ) ); }
 
 		// Error check
-		if ( $response->xpath_xml->messages->resultCode == "Error" ) {
+		if ( $response->xpath_xml->messages->resultCode == 'Error' ) {
 			self::set_error_messages( $response->xpath_xml->messages->message->text );
-			return FALSE;
+			return false;
 		}
 
 		$transaction_response = $response->getTransactionResponse();
@@ -676,11 +676,11 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 						else {
 							// Void transaction since it cannot be used
 							$void_response = $this->void_transaction( $data );
-							if ( GBS_DEV ) error_log( '----------VOID Response----------' . print_r( $void_response, TRUE ) );
+							if ( GBS_DEV ) { error_log( '----------VOID Response----------' . print_r( $void_response, true ) ); }
 						}
 					}
 					// Otherwise AuthCapture create a new transaction
-					if ( !isset( $transaction->transId ) ) {
+					if ( ! isset( $transaction->transId ) ) {
 						$transaction->order->invoiceNumber = $payment->get_id();
 						$create_transaction_response = self::$cim_request->createCustomerProfileTransaction( 'AuthCapture', $transaction );
 					}
@@ -689,16 +689,16 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 					$transaction_id = $transaction_response->transaction_id;
 
 					if ( GBS_DEV ) {
-						error_log( "transaction sent: " . print_r( $transaction, true ) );
-						error_log( "capture trans raw response: " . print_r( $create_transaction_response, true ) );
-						error_log( "capture trans response: " . print_r( $transaction_response, true ) );
+						error_log( 'transaction sent: ' . print_r( $transaction, true ) );
+						error_log( 'capture trans raw response: ' . print_r( $create_transaction_response, true ) );
+						error_log( 'capture trans response: ' . print_r( $transaction_response, true ) );
 					}
 
 					if ( $transaction_id ) { // A transaction_id will show the transaction was valid
 						foreach ( $items_to_capture as $deal_id => $amount ) {
 							unset( $data['uncaptured_deals'][$deal_id] );
 						}
-						if ( !isset( $data['capture_response'] ) ) {
+						if ( ! isset( $data['capture_response'] ) ) {
 							$data['capture_response'] = array();
 						}
 						$data['capture_response'][] = $transaction_response;
@@ -723,7 +723,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		$transaction->customerProfileId = $data['profile_id'];
 		$transaction->customerPaymentProfileId = $data['payment_profile_id'];
 		$transaction->customerShippingAddressId = $data['customer_address_id'];
-		$void_response = self::$cim_request->createCustomerProfileTransaction( "Void", $transaction );
+		$void_response = self::$cim_request->createCustomerProfileTransaction( 'Void', $transaction );
 		return $void_response;
 	}
 
@@ -732,12 +732,12 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	///////////////////////////////////////
 
 	public function remove_payment_profile( $profile_id, $user_id = 0 ) {
-		if ( !$user_id ) {
+		if ( ! $user_id ) {
 			$user_id = get_current_user_id();
 		}
 		$account_id = Group_Buying_Account::get_account_id_for_user( $user_id );
-		$hidden_profiles = get_post_meta( $account_id, self::USER_CIM_CARD_OPTION, TRUE );
-		if ( !is_array( $hidden_profiles ) ) {
+		$hidden_profiles = get_post_meta( $account_id, self::USER_CIM_CARD_OPTION, true );
+		if ( ! is_array( $hidden_profiles ) ) {
 			$hidden_profiles = array();
 		}
 		$hidden_profiles[] = $profile_id;
@@ -749,16 +749,16 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	}
 
 	public function save_payment_profile( $profile_id, $user_id = 0 ) {
-		if ( !$user_id ) {
+		if ( ! $user_id ) {
 			$user_id = get_current_user_id();
 		}
 		$account_id = Group_Buying_Account::get_account_id_for_user( $user_id );
-		if ( !$profile_id ) {
+		if ( ! $profile_id ) {
 			update_post_meta( $account_id, self::USER_CIM_CARD_OPTION, array() );
 			return;
 		}
-		$hidden_profiles = get_post_meta( $account_id, self::USER_CIM_CARD_OPTION, TRUE );
-		if ( !is_array( $hidden_profiles ) ) {
+		$hidden_profiles = get_post_meta( $account_id, self::USER_CIM_CARD_OPTION, true );
+		if ( ! is_array( $hidden_profiles ) ) {
 			return;
 		}
 		// search for position
@@ -771,11 +771,11 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 
 	public function ajax_cim() {
 		switch ( $_REQUEST['cim_action'] ) {
-		case 'remove_payment_profile':
-			self::remove_payment_profile( $_REQUEST['remove_profile'] );
+			case 'remove_payment_profile':
+				self::remove_payment_profile( $_REQUEST['remove_profile'] );
 			exit();
 			break;
-		default:
+			default:
 			break;
 		}
 	}
@@ -786,13 +786,13 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	///////////////
 
 	public function is_payment_profile_hidden( $profile_id, $user_id = 0 ) {
-		if ( !$user_id ) {
+		if ( ! $user_id ) {
 			$user_id = get_current_user_id();
 		}
 		$account_id = Group_Buying_Account::get_account_id_for_user( $user_id );
-		$hidden_profiles = get_post_meta( $account_id, self::USER_CIM_CARD_OPTION, TRUE );
-		if ( !is_array( $hidden_profiles ) ) {
-			return FALSE;
+		$hidden_profiles = get_post_meta( $account_id, self::USER_CIM_CARD_OPTION, true );
+		if ( ! is_array( $hidden_profiles ) ) {
+			return false;
 		}
 		return in_array( $profile_id, $hidden_profiles );
 	}
@@ -825,25 +825,25 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 						);
 					});
 				});
-			</script> <?php 
+			</script> <?php
 		}
 	}
 
 	public function filter_payment_fields( $fields ) {
 		if ( self::has_payment_profile() ) {
 			// If multiple payments isn't selected add the credit-card option
-			if ( !isset( $fields['payment_method']['type'] ) ) {
+			if ( ! isset( $fields['payment_method']['type'] ) ) {
 				$fields['payment_method']['type'] = 'radios';
 				$fields['payment_method']['weight'] = 0;
 				$fields['payment_method']['label'] = self::__( 'Payment Method' );
-				$fields['payment_method']['required'] = TRUE;
+				$fields['payment_method']['required'] = true;
 				$fields['payment_method']['options']['credit'] = self::load_view_to_string( 'checkout/credit-card-option', array( 'accepted_cards' => self::accepted_cards() ) );
 			}
 
 			// Add CC options to the checkout fields
 			$cards = self::payment_card_profiles( $profile_id );
 			foreach ( $cards as $payment_profile_id => $card_number ) {
-				if ( !self::is_payment_profile_hidden( $payment_profile_id ) ) {
+				if ( ! self::is_payment_profile_hidden( $payment_profile_id ) ) {
 					$fields['payment_method']['options'][$payment_profile_id] = self::__( 'Credit Card: ' ) . $card_number . '&nbsp;<a href="javascript:void(0)" ref="'.$payment_profile_id.'" class="cim_delete_card" title="'.gb__( 'Remove this CC from your account.' ).'"><img src="http://f.cl.ly/items/041u1f1W06451c0V361W/1372818887_delete.png"/></a>';
 				}
 			}
@@ -852,7 +852,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 			'type' => 'checkbox',
 			'weight' => 10,
 			'label' => self::__( 'Save Credit Card' ),
-			'default' => TRUE
+			'default' => true
 		);
 		return $fields;
 	}
@@ -881,7 +881,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	 */
 	public function process_payment_page( Group_Buying_Checkouts $checkout ) {
 		// Don't try to validate a CIM payment
-		if ( !isset( $_POST['gb_credit_payment_method'] ) || ( isset( $_POST['gb_credit_payment_method'] ) && ( $_POST['gb_credit_payment_method'] == 'cc' || $_POST['gb_credit_payment_method'] == 'credit' ) ) ) {
+		if ( ! isset( $_POST['gb_credit_payment_method'] ) || ( isset( $_POST['gb_credit_payment_method'] ) && ( $_POST['gb_credit_payment_method'] == 'cc' || $_POST['gb_credit_payment_method'] == 'credit' ) ) ) {
 			$fields = $this->payment_fields( $checkout );
 			foreach ( array_keys( $fields ) as $key ) {
 				if ( $key == 'cc_number' ) { // catch the cc_number so it can be sanatized
@@ -900,7 +900,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		}
 
 		if ( isset( $_POST['gb_credit_store_cc'] ) ) {
-			$checkout->cache['gb_credit_store_cc'] = TRUE;
+			$checkout->cache['gb_credit_store_cc'] = true;
 		}
 	}
 
@@ -933,14 +933,14 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	}
 
 	public function display_api_mode_field() {
-		echo '<label><input type="radio" name="'.self::API_MODE_OPTION.'" value="'.self::MODE_LIVE.'" '.checked( self::MODE_LIVE, $this->api_mode, FALSE ).'/> '.self::__( 'Live' ).'</label><br />';
-		echo '<label><input type="radio" name="'.self::API_MODE_OPTION.'" value="'.self::MODE_TEST.'" '.checked( self::MODE_TEST, $this->api_mode, FALSE ).'/> '.self::__( 'Sandbox' ).'</label>';
+		echo '<label><input type="radio" name="'.self::API_MODE_OPTION.'" value="'.self::MODE_LIVE.'" '.checked( self::MODE_LIVE, $this->api_mode, false ).'/> '.self::__( 'Live' ).'</label><br />';
+		echo '<label><input type="radio" name="'.self::API_MODE_OPTION.'" value="'.self::MODE_TEST.'" '.checked( self::MODE_TEST, $this->api_mode, false ).'/> '.self::__( 'Sandbox' ).'</label>';
 	}
 
 	public function display_api_preauth_field() {
-		echo '<label><input type="radio" name="'.self::PROCESS_PAYMENT_AUTHOIZATION_OPTION.'" value="1" '.checked( 1, $this->initial_authorization, FALSE ).'/> '.self::__( 'Authorize card before checkout.' ).'</label><p class="description">'.self::__( 'Regardless if the same authorization can be used for a future payment capture, i.e. authorizations for orders with items that have differing tipping points could not be used. Authorizations that cannot be used are now voided (ver. 2.1).' ).'</p>';
-		echo '<label><input type="radio" name="'.self::PROCESS_PAYMENT_AUTHOIZATION_OPTION.'" value="0" '.checked( 0, $this->initial_authorization, FALSE ).'/> '.self::__( 'Do not run an authorization before checkout completes.' ).'</label><p class="description">'.self::__( 'Not a recomended setting.' ).'</p>';
-		printf( '<p><label for="%s"><input type="checkbox" value="enabled" name="%s" %s /> %s</label></p><p class="description">%s</p>', self::SINGLE_DEAL_PURCHASING, self::SINGLE_DEAL_PURCHASING, checked( 'enabled', $this->single_deal, FALSE ), self::__( 'Disable cart and limit purchasing to a single item' ),  self::__( 'This will allow for the every pre-authorization to be used for  payment capturing when the deal tips (instead of the possibility of an authorization being voided and new auth_capture created).' ) );
+		echo '<label><input type="radio" name="'.self::PROCESS_PAYMENT_AUTHOIZATION_OPTION.'" value="1" '.checked( 1, $this->initial_authorization, false ).'/> '.self::__( 'Authorize card before checkout.' ).'</label><p class="description">'.self::__( 'Regardless if the same authorization can be used for a future payment capture, i.e. authorizations for orders with items that have differing tipping points could not be used. Authorizations that cannot be used are now voided (ver. 2.1).' ).'</p>';
+		echo '<label><input type="radio" name="'.self::PROCESS_PAYMENT_AUTHOIZATION_OPTION.'" value="0" '.checked( 0, $this->initial_authorization, false ).'/> '.self::__( 'Do not run an authorization before checkout completes.' ).'</label><p class="description">'.self::__( 'Not a recomended setting.' ).'</p>';
+		printf( '<p><label for="%s"><input type="checkbox" value="enabled" name="%s" %s /> %s</label></p><p class="description">%s</p>', self::SINGLE_DEAL_PURCHASING, self::SINGLE_DEAL_PURCHASING, checked( 'enabled', $this->single_deal, false ), self::__( 'Disable cart and limit purchasing to a single item' ),  self::__( 'This will allow for the every pre-authorization to be used for  payment capturing when the deal tips (instead of the possibility of an authorization being voided and new auth_capture created).' ) );
 	}
 
 	public function display_currency_code_field() {
@@ -958,8 +958,8 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 
 		self::init_authrequest();
 
-		if ( !isset( $data['profile_id'] ) || !isset( $data['customer_address_id'] ) || !isset( $data['payment_profile_id'] ) )
-			return;
+		if ( ! isset( $data['profile_id'] ) || ! isset( $data['customer_address_id'] ) || ! isset( $data['payment_profile_id'] ) ) {
+			return; }
 
 		// Create Auth & Capture Transaction
 		$transaction = new AuthorizeNetTransaction;
@@ -985,7 +985,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		// Authorize
 		$response = self::$cim_request->createCustomerProfileTransaction( 'AuthOnly', $transaction );
 
-		if ( $response->xpath_xml->messages->resultCode == "Error" ) {
+		if ( $response->xpath_xml->messages->resultCode == 'Error' ) {
 			return $response;
 		}
 
@@ -993,7 +993,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		$transaction_response = $response->getTransactionResponse();
 		$transaction_id = $transaction_response->transaction_id;
 
-		if ( GBS_DEV ) error_log( '----------Response----------' . print_r( $transaction_response, TRUE ) );
+		if ( GBS_DEV ) { error_log( '----------Response----------' . print_r( $transaction_response, true ) ); }
 
 		if ( $transaction_response->response_reason_code != 1 ) {
 			return $transaction_response;
@@ -1007,7 +1007,7 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 		$deal_info = array(); // creating purchased products array for payment below
 		foreach ( $purchase->get_products() as $item ) {
 			if ( isset( $item['payment_method'][$this->get_payment_method()] ) ) {
-				if ( !isset( $deal_info[$item['deal_id']] ) ) {
+				if ( ! isset( $deal_info[$item['deal_id']] ) ) {
 					$deal_info[$item['deal_id']] = array();
 				}
 				$deal_info[$item['deal_id']][] = $item;
@@ -1030,8 +1030,8 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 				'deals' => $deal_info,
 				'shipping_address' => $shipping_address
 			), Group_Buying_Payment::STATUS_AUTHORIZED );
-		if ( !$payment_id ) {
-			return FALSE;
+		if ( ! $payment_id ) {
+			return false;
 		}
 		$payment = Group_Buying_Payment::get_instance( $payment_id );
 		do_action( 'payment_authorized', $payment );
@@ -1049,11 +1049,11 @@ class Group_Buying_AuthnetCIM extends Group_Buying_Credit_Card_Processors {
 	 * @param bool    $display
 	 * @return void
 	 */
-	private function set_error_messages( $response, $display = TRUE ) {
+	private function set_error_messages( $response, $display = true ) {
 		if ( $display ) {
 			self::set_message( (string) $response, self::MESSAGE_STATUS_ERROR );
 		} else {
-			if ( GBS_DEV ) error_log( $response );
+			if ( GBS_DEV ) { error_log( $response ); }
 		}
 	}
 }
