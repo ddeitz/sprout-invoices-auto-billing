@@ -18,8 +18,8 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	const PAYMENT_SLUG = 'authnet_cim';
 
 	const AJAX_ACTION = 'cim_card_mngt';
-	const CLIENT_CIM_HIDDEN_CARDS = 'cim_card_mngt_hidden';
-	const CLIENT_META_PROFILE_ID = 'si_authnet_cim_profile_id';
+	const CLIENT_CIM_HIDDEN_CARDS = 'cim_card_mngt_hidden_v92';
+	const CLIENT_META_PROFILE_ID = 'si_authnet_cim_profile_id_v92';
 
 	protected static $instance;
 	protected static $cim_request;
@@ -96,9 +96,12 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		// Checkout template updates
 		add_action( 'si_head', array( $this, 'credit_card_cim_js' ) );
 		add_filter( 'sa_credit_fields', array( $this, 'add_cim_options' ), 100, 2 );
+		add_action( 'si_credit_card_payment_fields', array( $this, 'add_checking_info' ) );
 
 		// AJAX callback
 		add_action( 'wp_ajax_cim_card_mngt', array( get_class(), 'ajax_cim' ) );
+
+		add_action( 'si_checkout_action_'.SI_Checkouts::PAYMENT_PAGE, array( $this, 'process_payment_page_for_cim' ), 20, 1 );
 	}
 
 	/**
@@ -207,8 +210,8 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		// If no CC was submitted determine what the payment profile id was selected, if any.
 		if ( ! $payment_profile_id ) {
 			// Check if the payment profile id was passed
-			if ( isset( $_POST['si_credit_payment_method'] ) ) {
-				$payment_profile_id = $_POST['si_credit_payment_method'];
+			if ( isset( $_POST['sa_credit_payment_method'] ) ) {
+				$payment_profile_id = $_POST['sa_credit_payment_method'];
 			}
 			// If the payment profile id wasn't passed check the checkout cache for the cim profile id
 			elseif ( isset( $checkout->cache['cim_payment_profile'] ) ) {
@@ -246,7 +249,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 
 		// remove the payment profile if store cc is unchecked
 		if ( $new_profile_created ) {
-			if ( ! isset( $_POST['si_credit_store_cc'] ) && ! isset( $checkout->cache['si_credit_store_cc'] ) ) {
+			if ( ! isset( $_POST['sa_credit_store_payment_profile'] ) && ! isset( $checkout->cache['sa_credit_store_payment_profile'] ) ) {
 				$this->remove_payment_profile( $payment_profile_id, $invoice->get_id() );
 				do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - delete profile response: ', $payment_profile_id );
 			}
@@ -258,7 +261,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		$payment_id = SI_Payment::new_payment( array(
 				'payment_method' => $this->get_payment_method(),
 				'invoice' => $invoice->get_id(),
-				'amount' => $post_data['x_amount'],
+				'amount' => $transaction['amount'],
 				'data' => array(
 					'transaction_id' => $transaction_id,
 					'profile_id' => $profile_id,
@@ -281,7 +284,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	}
 
 
-	public function create_transaction( $profile_id, $payment_profile_id, $customer_address_id, SI_Checkouts $checkout, SI_Invoice $invoice ) {
+	public function create_transaction( $profile_id, $payment_profile_id, SI_Checkouts $checkout, SI_Invoice $invoice ) {
 
 		self::init_authrequest();
 
@@ -325,83 +328,244 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		return $transaction_response;
 	}
 
+
+
+	public function process_payment_page_for_cim( SI_Checkouts $checkout ) {
+		if ( isset( $_POST['sa_credit_payment_method'] ) && is_numeric( $_POST['sa_credit_payment_method'] ) ) {
+			$checkout->cache['cim_payment_profile'] = $_POST['sa_credit_payment_method'];
+		}
+
+		if ( isset( $_POST['sa_credit_store_payment_profile'] ) ) {
+			$checkout->cache['sa_credit_store_payment_profile'] = true;
+		}
+
+		// Banking options
+		if ( isset( $_POST['sa_bank_bank_routing'] ) ) {
+			$checkout->cache['bank_routing'] = $_POST['sa_bank_bank_routing'];
+		}
+
+		if ( isset( $_POST['sa_bank_bank_account'] ) ) {
+			$checkout->cache['bank_account'] = $_POST['sa_bank_bank_account'];
+		}
+
+		if ( isset( $_POST['sa_bank_store_payment_profile'] ) ) {
+			$checkout->cache['sa_credit_store_payment_profile'] = true;
+		}
+	}
+
 	///////////////////
 	// checkout page //
 	///////////////////
 
-	public function credit_card_cim_js() {
-		if ( self::has_payment_profile() ) { ?>
-			<style type="text/css">.cim_delete_card img { opacity: .3; } .cim_delete_card:hover img { opacity: 1.0; }</style>
-			<script type="text/javascript" charset="utf-8">
-				jQuery(document).ready(function() {
-					jQuery('.cim_delete_card').on( 'click', function(event){
-						event.preventDefault();
-						var $remove_card = jQuery( this );
-						var $payment_profile = $remove_card.data( 'ref' );
-						var $invoice_id = $remove_card.data( 'invoice-id' );
-						jQuery.post( si_js_object.ajax_url, { action: '<?php echo self::AJAX_ACTION ?>', cim_action: 'remove_payment_profile', remove_profile: $payment_profile, invoice_id: $invoice_id },
-							function( data ) {
-								$remove_card.parent().parent().fadeOut();
-							}
-						);
-					});
+	public function credit_card_cim_js() { ?>
+		<script type="text/javascript" charset="utf-8">
+			jQuery(document).ready(function() {
+				jQuery('.cim_delete_card').on( 'click', function(event){
+					event.preventDefault();
+					var $remove_card = jQuery( this );
+					var $payment_profile = $remove_card.data( 'ref' );
+					var $invoice_id = $remove_card.data( 'invoice-id' );
+					jQuery.post( si_js_object.ajax_url, { action: '<?php echo self::AJAX_ACTION ?>', cim_action: 'remove_payment_profile', remove_profile: $payment_profile, invoice_id: $invoice_id },
+						function( data ) {
+							$remove_card.parent().parent().fadeOut();
+							jQuery('[value="new_credit"]').prop( 'checked', true );
+						}
+					);
 				});
-			</script> <?php
-		}
+				hideBillingFields = function() {
+					jQuery('#billing_cc_fields .sa-form-field-required').find('input, select, textarea').each( function() {
+						jQuery(this).removeAttr( 'required' );
+						jQuery(this).attr( 'disabled', true );
+					});
+					enablePaymentMethods();
+					return true;
+				};
+
+				showBillingFields = function() {
+					jQuery('#billing_cc_fields .sa-form-field-required').find('input, select, textarea').each( function() {
+						jQuery(this).attr( 'required', true );
+						jQuery(this).removeAttr( 'disabled' );
+					});
+					enablePaymentMethods();
+					return true;
+				};
+
+				enablePaymentMethods = function() {
+					jQuery('#credit_card_fields [name="sa_credit_payment_method"]').each( function() {
+						jQuery(this).removeAttr( 'disabled' );
+					});
+					return true;
+				};
+
+				hideBankFields = function() {
+					console.log('hide');
+					jQuery('[for="sa_credit_store_payment_profile"]').show().attr( 'required', true );
+					jQuery('#sa_credit_cc_number').show().attr( 'required', true );
+					jQuery('#sa_credit_cc_name').show().attr( 'required', true );
+					jQuery('#sa_credit_cc_expiration_month').show().attr( 'required', true );
+					jQuery('#sa_credit_cc_expiration_year').show().attr( 'required', true );
+					jQuery('#sa_credit_cc_cvv').show().attr( 'required', true );
+					jQuery('#sa_bank_bank_routing').hide().removeAttr( 'required' );
+					jQuery('#sa_bank_bank_account').hide().removeAttr( 'required' );
+					jQuery('[for="sa_bank_store_payment_profile"]').hide().removeAttr( 'required' );
+					return true;
+				};
+
+				hideCCFields = function() {
+					jQuery('[for="sa_bank_store_payment_profile"]').show().attr( 'required', true );
+					jQuery('#sa_bank_bank_routing').show().attr( 'required', true );
+					jQuery('#sa_bank_bank_account').show().attr( 'required', true );
+					jQuery('#sa_credit_cc_number').hide().removeAttr( 'required' );
+					jQuery('#sa_credit_cc_name').hide().removeAttr( 'required' );
+					jQuery('#sa_credit_cc_expiration_month').hide().removeAttr( 'required' );
+					jQuery('#sa_credit_cc_expiration_year').hide().removeAttr( 'required' );
+					jQuery('#sa_credit_cc_cvv').hide().removeAttr( 'required' );
+					jQuery('[for="sa_credit_store_payment_profile"]').hide().removeAttr( 'required' );
+					return true;
+				};
+
+				//hideBillingFields();
+				hideBankFields();
+				jQuery('[name="sa_credit_payment_method"]').live('change', function(e) {
+					var selection = jQuery( this ).val();
+
+					if ( selection === 'new_credit' ) {
+						showBillingFields();
+						hideBankFields();
+					}
+					else if ( selection === 'new_bank' ) {
+						showBillingFields();
+						hideCCFields();
+					}
+					else {
+						hideBillingFields();
+					};
+
+				});
+			});
+		</script>
+		<style type="text/css">
+			.cim_delete_card span { opacity: .3; } 
+			.cim_delete_card:hover span { opacity: 1.0; }
+			span.sa-form-field-radio.clearfix {
+			    display: block;
+			}
+
+			.sa-form-aligned .sa-control-group .sa-form-field-radio label {
+			    text-align: left;
+			    display: block;
+			    width: auto;
+			    margin: 0;
+			}
+
+			#billing_cc_fields .sa-form-field-radio input {
+			    width: 2em;
+			}
+			#billing_cc_fields input#sa_credit_store_payment_profile, #billing_cc_fields  input#sa_bank_store_payment_profile {
+			    width: auto;
+			}
+			#billing_cc_fields label.sa-checkbox {
+			    text-align: right;
+			    width: 100%;
+			}
+			#credit_card_fields .sa-controls.input_wrap {
+			    margin: 0;
+			    display: block;
+			    clear: both;
+			}
+			.sa-form-field-bypass legend {
+				margin-top: 20px;
+			}
+		</style>
+		<?php
 	}
 
 	public function add_cim_options( $fields, $checkout ) {
-		if ( self::has_payment_profile() ) {
-			$invoice = $checkout->get_invoice();
-			$invoice_id = $invoice->get_id();
-			// If multiple payments isn't selected add the credit-card option
-			$fields['payment_method'] = array();
-			$fields['payment_method']['type'] = 'bypass';
-			$fields['payment_method']['weight'] = 0;
-			$fields['payment_method']['label'] = self::__( 'Payment Method' );
-			$fields['payment_method']['required'] = true;
+		$invoice = $checkout->get_invoice();
+		$invoice_id = $invoice->get_id();
+		// If multiple payments isn't selected add the credit-card option
+		$fields['payment_method'] = array();
+		$fields['payment_method']['type'] = 'bypass';
+		$fields['payment_method']['weight'] = 0;
+		$fields['payment_method']['label'] = self::__( 'Payment Method' );
+		$fields['payment_method']['required'] = true;
 
-			// Add CC options to the checkout fields
-			$profile_id = self::get_customer_profile_id( $invoice_id );
-			$cards = self::payment_card_profiles( $profile_id );
-			ob_start();
-			?>
-				<div class="sa-control-group ">
-					<span class="label_wrap">
-						<label for="sa_credit_payment_method"><?php self::_e( 'Payment Method' ) ?></label> <span class="required">*</span>
-					</span>
-					<span class="input_wrap">
-						<span class="sa-form-field sa-form-field-radios sa-form-field-required">
-							<?php if ( ! empty( $cards ) ) : ?>
-								<?php foreach ( $cards as $payment_profile_id => $card_number ) : ?>
-									<?php if ( ! self::is_payment_profile_hidden( $payment_profile_id, $invoice_id ) ) : ?>
-										<span class="sa-form-field-radio clearfix">
-											<label for="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>">
-												<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>" value="<?php echo (int) $payment_profile_id ?>"><?php printf( '%1$s: %2$s <a href="javascript:void(0)" data-ref="%3$s" data-invoice-id="%5$s" class="cim_delete_card" title="%4$s"><img src="http://f.cl.ly/items/041u1f1W06451c0V361W/1372818887_delete.png"/></a>', self::__( 'Credit Card' ), $card_number, (int) $payment_profile_id, self::__( 'Remove this CC from your account.' ), (int) $invoice_id ) ?>
-											</label>
-										</span>
-									<?php endif ?>
-								<?php endforeach ?>
-							<?php endif ?>
-							<span class="sa-form-field-radio">
-								<label for="sa_credit_payment_method_credit">
-								<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_credit" value="new_credit">&nbsp;<?php self::_e( 'Other Credit Card' ) ?></label>
-							</span>
+		// Add CC options to the checkout fields
+		$profile_id = self::get_customer_profile_id( $invoice_id );
+		$cards = self::payment_card_profiles( $profile_id );
+		ob_start();
+		?>
+			<div class="sa-control-group ">
+				<span class="label_wrap">
+					<label for="sa_credit_payment_method"><?php self::_e( 'Payment Method' ) ?></label> <span class="required">*</span>
+				</span>
+				<span class="input_wrap">
+					<span class="sa-form-field sa-form-field-radios sa-form-field-required">
+						<?php
+						if ( ! empty( $cards ) ) : ?>
+							<?php foreach ( $cards as $payment_profile_id => $card_number ) : ?>
+								<?php if ( ! self::is_payment_profile_hidden( $payment_profile_id, $invoice_id ) ) : ?>
+									<span class="sa-form-field-radio clearfix">
+										<label for="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>">
+											<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>" value="<?php echo (int) $payment_profile_id ?>"><?php printf( '%1$s: %2$s <a href="javascript:void(0)" data-ref="%3$s" data-invoice-id="%5$s" class="cim_delete_card" title="%4$s"><span class="dashicons dashicons-trash"></span></a>', self::__( 'Previously used' ), $card_number, (int) $payment_profile_id, self::__( 'Remove this CC from your account.' ), (int) $invoice_id ) ?>
+										</label>
+									</span>
+								<?php endif ?>
+							<?php endforeach ?>
+						<?php endif ?>
+						<span class="sa-form-field-radio clearfix">
+							<label for="sa_credit_payment_method_credit">
+							<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_credit" value="new_credit" checked="checked"><?php self::_e( 'New credit card:' ) ?></label>
 						</span>
 					</span>
-				</div>
-			<?php
-			$multiselect = ob_get_clean();
+				</span>
+			</div>
+		<?php
+		$multiselect = ob_get_clean();
 
-			$fields['payment_method']['output'] = $multiselect;
-		}
-		$fields['store_cc'] = array(
+		$fields['payment_method']['output'] = $multiselect;
+		$fields['store_payment_profile'] = array(
 			'type' => 'checkbox',
 			'weight' => 100,
 			'label' => self::__( 'Save Credit Card' ),
-			'default' => true
+			'default' => true,
 		);
 		return $fields;
+	}
+
+	public static function add_checking_info( $checkout ) {
+		$bank_fields = array();
+
+		$bank_fields['section_heading'] = array(
+			'type' => 'bypass',
+			'weight' => 1,
+			'output' => sprintf( '<span class="sa-form-field-radio clearfix"><label for="sa_credit_payment_method_bank"><input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_bank" value="new_bank">%s</label></span>', self::__( 'New checking account:' ) ),
+		);
+		$bank_fields['bank_routing'] = array(
+			'type' => 'text',
+			'weight' => 5,
+			'label' => self::__( 'Routing Number' ),
+			'attributes' => array(
+				//'autocomplete' => 'off',
+			),
+			'required' => true,
+		);
+		$bank_fields['bank_account'] = array(
+			'type' => 'text',
+			'weight' => 10,
+			'label' => self::__( 'Checking Account' ),
+			'attributes' => array(
+				//'autocomplete' => 'off',
+			),
+			'required' => true,
+		);
+		$bank_fields['store_payment_profile'] = array(
+			'type' => 'checkbox',
+			'weight' => 100,
+			'label' => self::__( 'Save Payment Profile' ),
+			'default' => true,
+		);
+		sa_form_fields( $bank_fields, 'bank' );
 	}
 
 
@@ -428,34 +592,34 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		$paymentProfile->billTo->phoneNumber = '';
 		// $paymentProfile->billTo->customerAddressId = $customer_address_id;
 
-		// CC info
-		$paymentProfile->payment->creditCard->cardNumber = $this->cc_cache['cc_number'];
-		$paymentProfile->payment->creditCard->expirationDate = $this->cc_cache['cc_expiration_year'] . '-' . sprintf( '%02s', $this->cc_cache['cc_expiration_month'] );
-		$paymentProfile->payment->creditCard->cardCode = $this->cc_cache['cc_cvv'];
+		if ( isset( $this->cc_cache['bank_routing'] ) ) {
+			// bank info
+			$paymentProfile2->payment->bankAccount->accountType = 'businessChecking';
+			$paymentProfile2->payment->bankAccount->routingNumber = $this->cc_cache['bank_routing'];
+			$paymentProfile2->payment->bankAccount->accountNumber = $this->cc_cache['bank_account'];
+		}
+		else {
+			// CC info
+			$paymentProfile->payment->creditCard->cardNumber = $this->cc_cache['cc_number'];
+			$paymentProfile->payment->creditCard->expirationDate = $this->cc_cache['cc_expiration_year'] . '-' . sprintf( '%02s', $this->cc_cache['cc_expiration_month'] );
+			$paymentProfile->payment->creditCard->cardCode = $this->cc_cache['cc_cvv'];
+		}
 
 		// Create
-		$create_profile_response = self::$cim_request->createCustomerPaymentProfile( $profile_id, $paymentProfile, 'testMode' );
+		$create_profile_response = self::$cim_request->createCustomerPaymentProfile( $profile_id, $paymentProfile );
+
+		if ( ! $create_profile_response->isOk() ) {
+			// In case no validation response is given but there's an error.
+			if ( isset( $create_profile_response->xml->messages->message->text ) ) {
+				self::set_error_messages( $create_profile_response->xml->messages->message->text );
+				return false;
+			}
+		}
 		// Get profile id
 		$payment_profile_id = $create_profile_response->getPaymentProfileId();
 
 		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - createCustomerPaymentProfile create_profile_response:', $create_profile_response );
 		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - payment_profile_id', $payment_profile_id );
-
-		// Validate
-		$validation = $create_profile_response->getValidationResponse();
-		if ( $validation->error ) {
-
-			do_action( 'si_error', __CLASS__ . '::' . __FUNCTION__ . ' - validation response: ', $validation );
-
-			self::set_error_messages( self::__( 'Credit Card Validation Declined.' ) );
-			return false;
-		}
-
-		// In case no validation response is given but there's an error.
-		if ( ! $payment_profile_id && isset( $create_profile_response->xml->messages->message->text ) ) {
-			self::set_error_messages( $create_profile_response->xml->messages->message->text );
-			return false;
-		}
 
 		// Save the profile, even if it may be removed later
 		$this->save_payment_profile( $payment_profile_id );
@@ -546,7 +710,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - create customer profile response: ', $response );
 
 		// Error check
-		if ( $response->isError() ) {
+		if ( ! $response->isOk() ) {
 			$error_message = $response->getMessageText();
 			// If the ID already exists tie it to the current user, hopefully the CIM profile is based on more than just email.
 			if ( strpos( $error_message, 'duplicate record with ID' ) ) {
