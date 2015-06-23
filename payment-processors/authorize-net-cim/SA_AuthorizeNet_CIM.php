@@ -108,6 +108,8 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		// Create transaction
 		add_action( 'si_ab_create_transaction', array( get_class(), 'auto_bill_transation' ), 10 , 2 );
 
+		add_filter( 'si_ab_payment_profiles', array( __CLASS__, 'client_payment_profiles' ) );
+
 	}
 
 	/**
@@ -264,6 +266,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 				'invoice' => $invoice->get_id(),
 				'amount' => $transaction['amount'],
 				'data' => array(
+					'invoice_id' => $invoice->get_id(),
 					'transaction_id' => $transaction_id,
 					'profile_id' => $profile_id,
 					'payment_profile_id' => $payment_profile_id,
@@ -522,10 +525,8 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 					<span class="sa-form-field sa-form-field-radios sa-form-field-required">
 						<?php
 						if ( ! empty( $cards ) ) : ?>
-							<?php foreach ( $cards as $payment_profile_id => $card_number ) : ?>
+							<?php foreach ( $cards as $payment_profile_id => $name ) : ?>
 								<?php if ( ! self::is_payment_profile_hidden( $payment_profile_id, $invoice_id ) ) : ?>
-									<?php
-										$name = ( '' == $card_number ) ? self::__( 'Checking' ) : $card_number ; ?>
 									<span class="sa-form-field-radio clearfix">
 										<label for="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>">
 											<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>" value="<?php echo (int) $payment_profile_id ?>"><?php printf( '%2$s <a href="javascript:void(0)" data-ref="%3$s" data-invoice-id="%5$s" class="cim_delete_card" title="%4$s"><span class="dashicons dashicons-trash"></span></a>', self::__( 'Previously used' ), $name, (int) $payment_profile_id, self::__( 'Remove this CC from your account.' ), (int) $invoice_id ) ?>
@@ -897,8 +898,17 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 			return false;
 		}
 		$invoice = SI_Invoice::get_instance( $invoice_id );
-		$response = self::create_transaction( $profile_id, $payment_profile_id, $invoice )
+		$response = self::create_transaction( $profile_id, $payment_profile_id, $invoice );
 		return $response->transaction_id;
+	}
+
+	public static function client_payment_profiles( $client_id ) {
+		$profile_id = get_post_meta( $client_id, self::CLIENT_META_PROFILE_ID, true );
+		if ( ! $profile_id ) {
+			return array();
+		}
+		$payment_card_profiles = self::payment_card_profiles( $profile_id );
+		return $payment_card_profiles;
 	}
 
 	//////////////
@@ -907,6 +917,11 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 
 	public static function get_client_id( $invoice_id = 0 ) {
 		$client_id = 0;
+
+		// a bit hacky so that an invoice id doesn't have to be passed if the client id is given instead.
+		if ( get_post_type( $invoice_id ) === SI_Client::POST_TYPE ) {
+			return $invoice_id;
+		}
 		if ( ! $invoice_id && is_single() && SI_Invoice::POST_TYPE === get_post_type( get_the_ID() ) ) {
 			$invoice_id = get_the_ID();
 		}

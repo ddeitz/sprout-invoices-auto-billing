@@ -8,10 +8,11 @@
  */
 class SI_Auto_Billing extends SI_Controller {
 	const AUTOBILL_OPTION = 'sc_allow_auto_bill';
+	const CHARGE_OPTION = 'sc_allow_charging';
 
 	public static function init() {
-		// add_action( 'sa_new_invoice', array( __CLASS__, 'maybe_auto_bill_new_invoice' ) );
-		// add_action( 'si_recurring_invoice_created', array( __CLASS__, 'maybe_charge_new_recurring_invoice' ) );
+		add_action( 'sa_new_invoice', array( __CLASS__, 'maybe_auto_bill_new_invoice' ) );
+		add_action( 'si_recurring_invoice_created', array( __CLASS__, 'maybe_charge_new_recurring_invoice' ) );
 	}
 
 	public static function maybe_auto_bill_new_invoice( $invoice ) {
@@ -29,6 +30,49 @@ class SI_Auto_Billing extends SI_Controller {
 		self::maybe_auto_bill_new_invoice( $invoice );
 	}
 
+	//////////
+	// Meta //
+	//////////
+
+	/**
+	 * Can the client be auto billed on invoice creation
+	 * @param  int $client_id
+	 * @return bool
+	 */
+	public static function can_auto_bill_client( $client_id ) {
+		$option = get_post_meta( $client_id, self::AUTOBILL_OPTION, true );
+		return (bool) $option;
+	}
+
+	public static function set_to_auto_bill_client( $client_id ) {
+		update_post_meta( $client_id, self::AUTOBILL_OPTION, true );
+	}
+
+	public static function clear_option_to_auto_bill_client( $client_id ) {
+		delete_post_meta( $client_id, self::AUTOBILL_OPTION );
+	}
+
+	/**
+	 * Can the client be charged with a saved payment profile
+	 * @param  int $client_id
+	 * @return bool
+	 */
+	public static function can_charge_client( $client_id ) {
+		$option = get_post_meta( $client_id, self::CHARGE_OPTION );
+		return is_numeric( $option );
+	}
+
+	public static function get_option_to_charge_client( $client_id ) {
+		return get_post_meta( $client_id, self::CHARGE_OPTION, true );
+	}
+
+	public static function save_option_to_charge_client( $client_id, $payment_profile_id ) {
+		update_post_meta( $client_id, self::CHARGE_OPTION, $payment_profile_id );
+	}
+
+	public static function clear_option_to_charge_client( $client_id ) {
+		delete_post_meta( $client_id, self::CHARGE_OPTION );
+	}
 
 	//////////////
 	// Utility //
@@ -55,20 +99,14 @@ class SI_Auto_Billing extends SI_Controller {
 		return $client_id;
 	}
 
-	public static function can_auto_bill_client( $client_id ) {
-		$option = get_post_meta( $client_id, self::AUTOBILL_OPTION );
-		return is_numeric( $option );
+	public static function load_addon_view( $view, $args, $allow_theme_override = true ) {
+		add_filter( 'si_views_path', array( __CLASS__, 'addons_view_path' ) );
+		$view = self::load_view( $view, $args, $allow_theme_override );
+		remove_filter( 'si_views_path', array( __CLASS__, 'addons_view_path' ) );
+		return $view;
 	}
 
-	public static function get_option_to_auto_bill_client( $client_id ) {
-		return get_post_meta( $client_id, self::AUTOBILL_OPTION );
-	}
-
-	public static function save_option_to_auto_bill_client( $client_id, $payment_profile_id ) {
-		update_post_meta( $client_id, self::AUTOBILL_OPTION, $payment_profile_id );
-	}
-
-	public static function clear_option_to_auto_bill_client( $client_id ) {
-		delete_post_meta( $client_id, self::AUTOBILL_OPTION );
+	public static function addons_view_path() {
+		return SA_ADDON_AUTO_BILLING_PATH . '/views/';
 	}
 }

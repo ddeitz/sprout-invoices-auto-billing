@@ -25,13 +25,13 @@ class SI_Auto_Billing_Checkout extends SI_Auto_Billing {
 		sa_form_fields( $selection, 'billing' );
 	}
 
-	public static function process_payment_page_maybe_save_option( SI_Payment $payment ) {
+	public static function process_payment_maybe_save_option( SI_Payment $payment ) {
 		if ( isset( $_POST['sa_billing_allow_to_autobill'] ) ) {
 			$payment_data = $payment->get_data();
-			$invoice_id = $payment_data['invoice'];
-			$payment_profile_id = $payment_data['data']['payment_profile_id'];
+			$invoice_id = $payment_data['invoice_id'];
+			$payment_profile_id = $payment_data['payment_profile_id'];
 			$client_id = self::get_client_id( $invoice_id );
-			self::save_option_to_auto_bill( $client_id, $payment_profile_id );
+			self::save_option_to_charge_client( $client_id, $payment_profile_id );
 		}
 	}
 }

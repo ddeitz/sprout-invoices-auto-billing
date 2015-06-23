@@ -26,12 +26,12 @@ function sa_load_auto_billing_addon() {
 	}
 	// Controller
 	require_once( 'controllers/Auto_Billing.php' );
-	require_once( 'controllers/Auto_Billing_AJAX.php' );
+	require_once( 'controllers/Auto_Billing_Admin.php' );
 	require_once( 'controllers/Auto_Billing_Checkout.php' );
 	require_once( 'controllers/Auto_Billing_Clients.php' );
 
 	SI_Auto_Billing::init();
-	SI_Auto_Billing_AJAX::init();
+	SI_Auto_Billing_Admin::init();
 	SI_Auto_Billing_Checkout::init();
 	SI_Auto_Billing_Client::init();
 }
