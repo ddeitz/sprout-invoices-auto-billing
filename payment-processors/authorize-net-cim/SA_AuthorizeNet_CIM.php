@@ -105,6 +105,9 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		// AJAX callback
 		add_action( 'wp_ajax_cim_card_mngt', array( get_class(), 'ajax_cim' ) );
 
+		// Create transaction
+		add_action( 'si_ab_create_transaction', array( get_class(), 'auto_bill_transation' ), 10 , 2 );
+
 	}
 
 	/**
@@ -235,7 +238,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		$response_array = array();
 
 		// Create AUTHORIZATION/CAPTURE Transaction
-		$transaction_response = $this->create_transaction( $profile_id, $payment_profile_id, $checkout, $invoice );
+		$transaction_response = $this->create_transaction( $profile_id, $payment_profile_id, $invoice );
 		$transaction_id = $transaction_response->transaction_id;
 
 		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - create response: ', $transaction_response );
@@ -282,7 +285,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	}
 
 
-	public function create_transaction( $profile_id, $payment_profile_id, SI_Checkouts $checkout, SI_Invoice $invoice ) {
+	public function create_transaction( $profile_id, $payment_profile_id, SI_Invoice $invoice ) {
 
 		self::init_authrequest();
 
@@ -881,6 +884,19 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		}
 	}
 
+	///////////////
+	// Auto Bill //
+	///////////////
+
+	public static function auto_bill_transation( $invoice_id, $payment_profile_id ) {
+		$profile_id = self::get_customer_profile_id( $invoice_id );
+		if ( ! $profile_id ) {
+			return false;
+		}
+		$invoice = SI_Invoice::get_instance( $invoice_id );
+		$response = self::create_transaction( $profile_id, $payment_profile_id, $invoice )
+		return $response->transaction_id;
+	}
 
 	//////////////
 	// Utility //

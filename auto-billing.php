@@ -26,6 +26,10 @@ function sa_load_auto_billing_addon() {
 	}
 	// Controller
 	require_once( 'controllers/Auto_Billing.php' );
+	require_once( 'controllers/Auto_Billing_Checkout.php' );
+
+	SI_Auto_Billing::init();
+	SI_Auto_Billing_Checkout::init();
 }
 
 add_action( 'si_payment_processors_loaded', 'sa_load_authnetcim_processor' );
@@ -33,7 +37,6 @@ function sa_load_authnetcim_processor() {
 	if ( class_exists( 'SI_AuthorizeNet_CIM' ) ) {
 		return;
 	}
-
 	// Payment Processor
 	require_once( 'payment-processors/authorize-net-cim/SA_AuthorizeNet_CIM.php' );
 }
