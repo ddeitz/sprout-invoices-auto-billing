@@ -285,7 +285,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	}
 
 
-	public function create_transaction( $profile_id, $payment_profile_id, SI_Invoice $invoice ) {
+	public function create_transaction( $profile_id, $payment_profile_id, SI_Invoice $invoice, $error_message = true  ) {
 
 		self::init_authrequest();
 
@@ -319,8 +319,11 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 
 		// Error check
 		if ( $response->xpath_xml->messages->resultCode == 'Error' ) {
-			self::set_error_messages( (string) $response->xpath_xml->messages->message->text );
-			return false;
+			if ( $error_message ) {
+				self::set_error_messages( (string) $response->xpath_xml->messages->message->text );
+				return false;
+			}
+			return (string) $response->xpath_xml->messages->message->text;
 		}
 
 		$transaction_response = $response->getTransactionResponse();

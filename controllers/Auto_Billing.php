@@ -10,8 +10,8 @@ class SI_Auto_Billing extends SI_Controller {
 	const AUTOBILL_OPTION = 'sc_allow_auto_bill';
 
 	public static function init() {
-		add_action( 'sa_new_invoice', array( __CLASS__, 'maybe_auto_bill_new_invoice' ) );
-		add_action( 'si_recurring_invoice_created', array( __CLASS__, 'maybe_charge_new_recurring_invoice' ) );
+		// add_action( 'sa_new_invoice', array( __CLASS__, 'maybe_auto_bill_new_invoice' ) );
+		// add_action( 'si_recurring_invoice_created', array( __CLASS__, 'maybe_charge_new_recurring_invoice' ) );
 	}
 
 	public static function maybe_auto_bill_new_invoice( $invoice ) {
