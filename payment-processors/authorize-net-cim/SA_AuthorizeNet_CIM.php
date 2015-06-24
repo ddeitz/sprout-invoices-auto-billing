@@ -106,7 +106,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		add_action( 'wp_ajax_cim_card_mngt', array( get_class(), 'ajax_cim' ) );
 
 		// Create transaction
-		add_action( 'si_ab_create_transaction', array( get_class(), 'auto_bill_transation' ), 10 , 2 );
+		add_action( 'si_ab_create_payment', array( get_class(), 'cim_payment' ), 10 , 2 );
 
 		add_filter( 'si_ab_payment_profiles', array( __CLASS__, 'client_payment_profiles' ) );
 
@@ -288,7 +288,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	}
 
 
-	public function create_transaction( $profile_id, $payment_profile_id, SI_Invoice $invoice, $error_message = true  ) {
+	public function create_transaction( $profile_id, $payment_profile_id, SI_Invoice $invoice, $set_error_message = true  ) {
 
 		self::init_authrequest();
 
@@ -322,7 +322,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 
 		// Error check
 		if ( $response->xpath_xml->messages->resultCode == 'Error' ) {
-			if ( $error_message ) {
+			if ( $set_error_message ) {
 				self::set_error_messages( (string) $response->xpath_xml->messages->message->text );
 				return false;
 			}
@@ -892,14 +892,50 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	// Auto Bill //
 	///////////////
 
-	public static function auto_bill_transation( $invoice_id, $payment_profile_id ) {
+	public static function cim_payment( $invoice_id, $payment_profile_id ) {
 		$profile_id = self::get_customer_profile_id( $invoice_id );
 		if ( ! $profile_id ) {
 			return false;
 		}
 		$invoice = SI_Invoice::get_instance( $invoice_id );
-		$response = self::create_transaction( $profile_id, $payment_profile_id, $invoice );
-		return $response->transaction_id;
+		$transaction_response = self::create_transaction( $profile_id, $payment_profile_id, $invoice, false );
+		error_log( 'response: ' . print_r( $transaction_response, true ) );
+		if ( ! is_object( $transaction_response ) ) {
+			return $transaction_response;
+		}
+		if ( $transaction_response->response_reason_code != 1 ) {
+			return $transaction_response;
+		}
+
+		// convert the transaction_response object to an array for the payment record
+		$transaction_json = json_encode( $transaction_response );
+		$transaction = json_decode( $transaction_json, true );
+		error_log( 'transaction log: ' . print_r( $transaction, true ) );
+
+		$payment_id = SI_Payment::new_payment( array(
+				'payment_method' => self::PAYMENT_METHOD,
+				'invoice' => $invoice_id,
+				'amount' => $transaction['amount'],
+				'data' => array(
+					'invoice_id' => $invoice->get_id(),
+					'transaction_id' => $transaction['transaction_id'],
+					'profile_id' => $profile_id,
+					'payment_profile_id' => $payment_profile_id,
+					'live' => ( self::$api_mode == self::MODE_LIVE ),
+					'api_response' => $transaction,
+				),
+			), SI_Payment::STATUS_AUTHORIZED );
+		if ( ! $payment_id ) {
+			return false;
+		}
+
+		// Go through the routine and do the authorized actions and then complete.
+		$payment = SI_Payment::get_instance( $payment_id );
+		do_action( 'payment_authorized', $payment );
+		$payment->set_status( SI_Payment::STATUS_COMPLETE );
+		do_action( 'payment_complete', $payment );
+
+		return $payment_id;
 	}
 
 	public static function client_payment_profiles( $client_id ) {

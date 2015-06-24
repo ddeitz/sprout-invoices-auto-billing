@@ -9,10 +9,35 @@
 class SI_Auto_Billing extends SI_Controller {
 	const AUTOBILL_OPTION = 'sc_allow_auto_bill';
 	const CHARGE_OPTION = 'sc_allow_charging';
+	const RECORD = 'auto_payments';
 
 	public static function init() {
 		add_action( 'sa_new_invoice', array( __CLASS__, 'maybe_auto_bill_new_invoice' ) );
 		add_action( 'si_recurring_invoice_created', array( __CLASS__, 'maybe_charge_new_recurring_invoice' ) );
+	}
+
+	/**
+	 * Attempt to charge the client's payment store
+	 * @param  int $invoice_id
+	 * @param  int $client_id
+	 * @return string/int             error message or payment id.
+	 */
+	public static function attempt_charge_invoice_balance( $invoice_id, $client_id ) {
+		$payment_profile_id = self::get_option_to_charge_client( $client_id );
+		if ( ! is_numeric( $payment_profile_id ) ) {
+			return self::__( 'Client not setup for automatic payments.' );
+		}
+		$response = SI_AuthorizeNet_CIM::cim_payment( $invoice_id, $payment_profile_id ); // TODO be independent for other processors
+		return $response;
+	}
+
+	//////////////////
+	// Auto billing //
+	//////////////////
+
+	public static function maybe_charge_new_recurring_invoice( $invoice_id ) {
+		$invoice = SI_Invoice::get_instance( $invoice_id );
+		self::maybe_auto_bill_new_invoice( $invoice );
 	}
 
 	public static function maybe_auto_bill_new_invoice( $invoice ) {
@@ -21,13 +46,16 @@ class SI_Auto_Billing extends SI_Controller {
 		if ( ! self::can_auto_bill_client( $client_id ) ) {
 			return;
 		}
-		$auto_bill = self::get_option_to_auto_bill_client( $client_id );
-		do_action( 'si_ab_create_transaction', $invoice_id, $auto_bill );
-	}
-
-	public static function maybe_charge_new_recurring_invoice( $invoice_id ) {
-		$invoice = SI_Invoice::get_instance( $invoice_id );
-		self::maybe_auto_bill_new_invoice( $invoice );
+		$response = self::attempt_charge_invoice_balance( $invoice_id, $client_id );
+		$record_message = ( ! is_numeric( $response ) ) ?  sc__( 'Auto Payment Failed on Invoice: %s.' ) : sc__( 'Auto Payment Succeeded on Invoice: %s.' );
+		do_action( 'si_new_record',
+			$response,
+			self::RECORD,
+			$client_id,
+			sprintf( $record_message, (int) $invoice_id ),
+			0,
+			false
+		);
 	}
 
 	//////////
@@ -58,7 +86,7 @@ class SI_Auto_Billing extends SI_Controller {
 	 * @return bool
 	 */
 	public static function can_charge_client( $client_id ) {
-		$option = get_post_meta( $client_id, self::CHARGE_OPTION );
+		$option = get_post_meta( $client_id, self::CHARGE_OPTION, true );
 		return is_numeric( $option );
 	}
 
@@ -104,6 +132,12 @@ class SI_Auto_Billing extends SI_Controller {
 		$view = self::load_view( $view, $args, $allow_theme_override );
 		remove_filter( 'si_views_path', array( __CLASS__, 'addons_view_path' ) );
 		return $view;
+	}
+
+	public static function load_addon_view_to_string( $view, $args, $allow_theme_override = true ) {
+		ob_start();
+		self::load_addon_view( $view, $args, $allow_theme_override );
+		return ob_get_clean();
 	}
 
 	public static function addons_view_path() {
