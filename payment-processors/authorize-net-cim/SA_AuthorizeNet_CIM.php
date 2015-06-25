@@ -420,8 +420,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 				};
 
 				hideBankFields = function() {
-					console.log('hide');
-					jQuery('[for="sa_credit_store_payment_profile"]').show().attr( 'required', true );
+					jQuery('[for="si_credit_store_payment_profile"]').show().attr( 'required', true );
 					jQuery('#sa_credit_cc_number').show().attr( 'required', true );
 					jQuery('#sa_credit_cc_name').show().attr( 'required', true );
 					jQuery('#sa_credit_cc_expiration_month').show().attr( 'required', true );
@@ -429,12 +428,12 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 					jQuery('#sa_credit_cc_cvv').show().attr( 'required', true );
 					jQuery('#sa_bank_bank_routing').hide().removeAttr( 'required' );
 					jQuery('#sa_bank_bank_account').hide().removeAttr( 'required' );
-					jQuery('[for="sa_bank_store_payment_profile"]').hide().removeAttr( 'required' );
+					jQuery('[for="si_bank_store_payment_profile"]').hide().removeAttr( 'required' );
 					return true;
 				};
 
 				hideCCFields = function() {
-					jQuery('[for="sa_bank_store_payment_profile"]').show().attr( 'required', true );
+					jQuery('[for="si_bank_store_payment_profile"]').show().attr( 'required', true );
 					jQuery('#sa_bank_bank_routing').show().attr( 'required', true );
 					jQuery('#sa_bank_bank_account').show().attr( 'required', true );
 					jQuery('#sa_credit_cc_number').hide().removeAttr( 'required' );
@@ -442,7 +441,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 					jQuery('#sa_credit_cc_expiration_month').hide().removeAttr( 'required' );
 					jQuery('#sa_credit_cc_expiration_year').hide().removeAttr( 'required' );
 					jQuery('#sa_credit_cc_cvv').hide().removeAttr( 'required' );
-					jQuery('[for="sa_credit_store_payment_profile"]').hide().removeAttr( 'required' );
+					jQuery('[for="si_credit_store_payment_profile"]').hide().removeAttr( 'required' );
 					return true;
 				};
 
@@ -555,7 +554,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		return $fields;
 	}
 
-	public static function add_checking_info( $checkout ) {
+	public static function checking_account_fields() {
 		$bank_fields = array();
 
 		$bank_fields['section_heading'] = array(
@@ -587,7 +586,11 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 			'label' => self::__( 'Save Bank Info' ),
 			'default' => true,
 		);
-		sa_form_fields( $bank_fields, 'bank' );
+		return $bank_fields;
+	}
+
+	public static function add_checking_info() {
+		sa_form_fields( self::checking_account_fields(), 'bank' );
 	}
 
 
@@ -647,7 +650,66 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - payment_profile_id', $payment_profile_id );
 
 		// Save the profile, even if it may be removed later
-		$this->save_payment_profile( $payment_profile_id );
+		$this->save_payment_profile( $payment_profile_id, $invoice->get_id() );
+
+		return $payment_profile_id;
+	}
+
+
+	/**
+	 * Create the Profile within CIM if one doesn't exist.
+	 *
+	 */
+	public function manually_payment_profile( $profile_id, $client_id, $payment_info ) {
+		self::init_authrequest();
+		// Create new customer profile
+		$paymentProfile = new AuthorizeNetPaymentProfile;
+		$paymentProfile->customerType = 'individual';
+		$paymentProfile->billTo->firstName = $payment_info['billing']['first_name'];
+		$paymentProfile->billTo->lastName = $payment_info['billing']['last_name'];
+		$paymentProfile->billTo->address = $payment_info['billing']['street'];
+		$paymentProfile->billTo->city = $payment_info['billing']['city'];
+		$paymentProfile->billTo->state = $payment_info['billing']['zone'];
+		$paymentProfile->billTo->zip = $payment_info['billing']['postal_code'];
+		$paymentProfile->billTo->country = $payment_info['billing']['country'];
+		$paymentProfile->billTo->phoneNumber = '';
+		// $paymentProfile->billTo->customerAddressId = $customer_address_id;
+
+		if ( isset( $payment_info['bank_routing'] ) ) {
+			// bank info
+			$paymentProfile->payment->bankAccount->accountType = 'businessChecking';
+			$paymentProfile->payment->bankAccount->routingNumber = $payment_info['bank_routing'];
+			$paymentProfile->payment->bankAccount->accountNumber = $payment_info['bank_account'];
+			$paymentProfile->payment->bankAccount->nameOnAccount = $payment_info['billing']['first_name'] . ' ' . $payment_info['billing']['last_name'];
+			//$paymentProfile->payment->bankAccount->echeckType = 'WEB';
+			//$paymentProfile->payment->bankAccount->bankName = 'Unknown';
+		}
+		else {
+			// CC info
+			$paymentProfile->payment->creditCard->cardNumber = $payment_info['cc_number'];
+			$paymentProfile->payment->creditCard->expirationDate = $payment_info['cc_expiration_year'] . '-' . sprintf( '%02s', $payment_info['cc_expiration_month'] );
+			$paymentProfile->payment->creditCard->cardCode = $payment_info['cc_cvv'];
+		}
+		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - paymentProfile:', $paymentProfile );
+
+		// Create
+		$create_profile_response = self::$cim_request->createCustomerPaymentProfile( $profile_id, $paymentProfile );
+
+		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - create_profile_response:', $create_profile_response );
+
+		if ( ! $create_profile_response->isOk() ) {
+			// In case no validation response is given but there's an error.
+			if ( isset( $create_profile_response->xml->messages->message->text ) ) {
+				return (string) $create_profile_response->xml->messages->message->text;
+			}
+		}
+		// Get profile id
+		$payment_profile_id = $create_profile_response->getPaymentProfileId();
+
+		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - createCustomerPaymentProfile create_profile_response:', $create_profile_response );
+		do_action( 'si_log', __CLASS__ . '::' . __FUNCTION__ . ' - payment_profile_id', $payment_profile_id );
+
+		self::save_payment_profile( $payment_profile_id, $client_id );
 
 		return $payment_profile_id;
 	}

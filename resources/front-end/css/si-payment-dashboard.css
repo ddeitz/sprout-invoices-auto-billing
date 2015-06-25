@@ -1,0 +1,97 @@
+.si_clearfix:after {
+	content: ".";
+	display: block;
+	clear: both;
+	visibility: hidden;
+	line-height: 0;
+	height: 0
+}
+
+.si_clearfix {
+	display: block
+}
+
+html[xmlns] .si_clearfix {
+	display: block
+}
+
+* html .si_clearfix {
+	height: 1%
+}
+
+.si_inline_spinner {
+	float: none;
+	margin: 0 5px -6px
+}
+
+.si_loader,
+.si_loader:before,
+.si_loader:after {
+  background: #CCC;
+  -webkit-animation: load1 1s infinite ease-in-out;
+  animation: load1 1s infinite ease-in-out;
+  width: 1em;
+  height: .5em;
+}
+.si_loader:before,
+.si_loader:after {
+  position: absolute;
+  top: 0;
+  content: '';
+}
+.si_loader:before {
+  left: -1.5em;
+  -webkit-animation-delay: -0.32s;
+  animation-delay: -0.32s;
+}
+.si_loader {
+  text-indent: -9999em;
+  margin: auto;
+  margin-left: 20px ;
+  position: relative;
+  font-size: 5px;
+  -webkit-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-animation-delay: -0.16s;
+  animation-delay: -0.16s;
+}
+.si_loader:after {
+  left: 1.5em;
+}
+@-webkit-keyframes load1 {
+  0%,
+  80%,
+  100% {
+    box-shadow: 0 0 #CCC;
+    height: 4em;
+  }
+  40% {
+    box-shadow: 0 -2em #CCC;
+    height: 5em;
+  }
+}
+@keyframes load1 {
+  0%,
+  80%,
+  100% {
+    box-shadow: 0 0 #CCC;
+    height: 4em;
+  }
+  40% {
+    box-shadow: 0 -2em #CCC;
+    height: 5em;
+  }
+}
+
+span.inline_error_message {
+	margin-left: 10px;
+	color: red;
+	font-weight: 300
+}
+
+span.inline_success_message {
+	margin-left: 10px;
+	color: green;
+	font-weight: 300
+}

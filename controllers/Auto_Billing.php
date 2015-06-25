@@ -99,7 +99,7 @@ class SI_Auto_Billing extends SI_Controller {
 	}
 
 	public static function clear_option_to_charge_client( $client_id ) {
-		delete_post_meta( $client_id, self::CHARGE_OPTION );
+		update_post_meta( $client_id, self::CHARGE_OPTION, '' );
 	}
 
 	//////////////
