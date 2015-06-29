@@ -7,14 +7,16 @@
 				<label for="sa_credit_payment_method">&nbsp;</label>
 			</span>
 			<span class="input_wrap si_clearfix">
-				<span class="sa-form-field sa-form-field-radios sa-form-field-required">	
-					<?php foreach ( $payment_profiles as $payment_profile_id => $name ) : ?>
-						<div class="sa-form-field-radio si_clearfix">
-							<label for="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>">
-								<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>" value="<?php echo (int) $payment_profile_id ?>" <?php checked( (int) $default_payment_profile_id, (int) $payment_profile_id ) ?>>&nbsp;<?php printf( '%1$s <a href="javascript:void(0)" data-ref="%2$s" data-client-id="%4$s" class="cim_delete_card" title="%3$s"><span class="dashicons dashicons-trash"></span></a>', $name, (int) $payment_profile_id, self::__( 'Remove this CC from your account.' ), (int) $client_id ) ?>
-							</label>
-						</div>
-					<?php endforeach ?>
+				<span class="sa-form-field sa-form-field-radios sa-form-field-required">
+					<?php if ( ! empty( $payment_profiles ) ): ?>
+						<?php foreach ( $payment_profiles as $payment_profile_id => $name ) : ?>
+							<div class="sa-form-field-radio si_clearfix">
+								<label for="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>">
+									<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>" value="<?php echo (int) $payment_profile_id ?>" <?php checked( (int) $default_payment_profile_id, (int) $payment_profile_id ) ?>>&nbsp;<?php printf( '%1$s <a href="javascript:void(0)" data-ref="%2$s" data-client-id="%4$s" class="cim_delete_card" title="%3$s"><span class="dashicons dashicons-trash"></span></a>', $name, (int) $payment_profile_id, self::__( 'Remove this CC from your account.' ), (int) $client_id ) ?>
+								</label>
+							</div>
+						<?php endforeach ?>
+					<?php endif ?>
 					<div class="sa-form-field-radio si_clearfix">
 						<label for="sa_credit_payment_method_none">
 						<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_none" value="" <?php checked( $default_payment_profile_id, '' ) ?>>&nbsp;<?php self::_e( 'None' ) ?></label>

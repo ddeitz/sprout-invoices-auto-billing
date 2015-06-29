@@ -42,7 +42,7 @@ class SI_Auto_Billing_Client extends SI_Auto_Billing {
 			'description' => self::__( 'Client will be charged automatically after an invoice is <em>created</em>.' ),
 			'default' => self::can_auto_bill_client( $client_id ),
 		);
-		$payment_profiles = apply_filters( 'si_ab_payment_profiles', $client_id );
+		$payment_profiles = apply_filters( 'si_ab_payment_profiles', array(), $client_id );
 		self::load_addon_view( 'admin/meta-boxes/clients/auto-billing-meta-box', array(
 				'client_id' => $client_id,
 				'fields' => $fields,

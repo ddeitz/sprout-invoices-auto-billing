@@ -82,8 +82,11 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 
 	protected function __construct() {
 		parent::__construct();
-		self::$api_username = get_option( self::API_USERNAME_OPTION, '' );
-		self::$api_password = get_option( self::API_PASSWORD_OPTION, '' );
+
+		// Not set since the init_authrequest needs and does it.
+		// self::$api_username = get_option( self::API_USERNAME_OPTION, '' );
+		// self::$api_password = get_option( self::API_PASSWORD_OPTION, '' );
+		
 		self::$api_mode = get_option( self::API_MODE_OPTION, self::MODE_TEST );
 
 		if ( is_admin() ) {
@@ -108,7 +111,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		// Create transaction
 		add_action( 'si_ab_create_payment', array( get_class(), 'cim_payment' ), 10 , 2 );
 
-		add_filter( 'si_ab_payment_profiles', array( __CLASS__, 'client_payment_profiles' ) );
+		add_filter( 'si_ab_payment_profiles', array( __CLASS__, 'filter_client_payment_profiles' ), 10, 2 );
 
 	}
 
@@ -120,6 +123,11 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	public static function init_authrequest() {
 		if ( ! ( isset( self::$cim_request ) && is_a( self::$cim_request, 'AuthorizeNetCIM' ) ) ) {
 			if ( ! class_exists( 'AuthorizeNetCIM' ) ) {
+				// set in case the class is static.
+				self::$api_username = get_option( self::API_USERNAME_OPTION, '' );
+				self::$api_password = get_option( self::API_PASSWORD_OPTION, '' );
+				self::$api_mode = get_option( self::API_MODE_OPTION, self::MODE_TEST );
+
 				define( 'AUTHORIZENET_API_LOGIN_ID', self::$api_username );
 				define( 'AUTHORIZENET_TRANSACTION_KEY', self::$api_password );
 				if ( self::$api_mode === self::MODE_TEST ) {
@@ -961,7 +969,6 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		}
 		$invoice = SI_Invoice::get_instance( $invoice_id );
 		$transaction_response = self::create_transaction( $profile_id, $payment_profile_id, $invoice, false );
-		error_log( 'response: ' . print_r( $transaction_response, true ) );
 		if ( ! is_object( $transaction_response ) ) {
 			return $transaction_response;
 		}
@@ -972,7 +979,6 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		// convert the transaction_response object to an array for the payment record
 		$transaction_json = json_encode( $transaction_response );
 		$transaction = json_decode( $transaction_json, true );
-		error_log( 'transaction log: ' . print_r( $transaction, true ) );
 
 		$payment_id = SI_Payment::new_payment( array(
 				'payment_method' => self::PAYMENT_METHOD,
@@ -1000,7 +1006,12 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		return $payment_id;
 	}
 
-	public static function client_payment_profiles( $client_id ) {
+	public static function filter_client_payment_profiles( $payment_card_profiles = array(), $client_id = 0 ) {
+		$payment_card_profiles = self::client_payment_profiles( $client_id );
+		return $payment_card_profiles;
+	}
+
+	public static function client_payment_profiles( $client_id = 0 ) {
 		$profile_id = get_post_meta( $client_id, self::CLIENT_META_PROFILE_ID, true );
 		if ( ! $profile_id ) {
 			return array();

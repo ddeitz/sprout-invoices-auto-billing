@@ -64,7 +64,7 @@ class SI_Auto_Billing_Shortcodes extends SI_Auto_Billing {
 		wp_enqueue_script( 'si_payment_dashboard' );
 		wp_enqueue_style( 'si_payment_dashboard' );
 
-		$payment_profiles = apply_filters( 'si_ab_payment_profiles', $client_id );
+		$payment_profiles = SI_AuthorizeNet_CIM::client_payment_profiles( $client_id );
 		return self::load_addon_view_to_string( 'shortcodes/payments-dashboard', array(
 			'client_id' => $client_id,
 			'payment_profiles' => $payment_profiles,
@@ -98,7 +98,6 @@ class SI_Auto_Billing_Shortcodes extends SI_Auto_Billing {
 		}
 
 		$submission = wp_parse_args( $_REQUEST['submission'] );
-		error_log( 'submission: ' . print_r( $submission, true ) );
 
 		if ( ! isset( $submission['client_id'] ) ) {
 			wp_send_json_error( array( 'message' => self::__( 'Missing critical info!' ) ) );
