@@ -17,13 +17,8 @@ class SI_Auto_Billing_Cron extends SI_Auto_Billing {
 	}
 
 	public static function maybe_process_payments_on_overdue_invoices() {
-		$option_key = 'last_overdue_invoices_payment_attempt_timestamp_v1';
-		$last_check = get_option( $option_key, 0 );
-		$delay = current_time( 'timestamp' ) - apply_filters( 'si_get_overdue_payment_attempt_delay', 60 * 10 ); // ten minute delay
-		if ( $last_check > $delay ) {
-			return;
-		}
-		$recently_overdue = SI_Invoice::get_overdue_invoices( $last_check, $delay );
+		$start_due_date = current_time( 'timestamp' ) - apply_filters( 'si_get_overdue_payment_attempt_start', 60 * 60 * 24 * 15 ); // last 15 days
+		$recently_overdue = SI_Invoice::get_overdue_invoices( $start_due_date );
 		if ( ! empty( $recently_overdue ) ) { // no overdue invoices.
 			foreach ( $recently_overdue as $invoice_id ) {
 				$attempt_option = get_post_meta( $invoice_id, SI_Auto_Billing_Admin::AUTOBILL_OPTION, true );
@@ -38,7 +33,6 @@ class SI_Auto_Billing_Cron extends SI_Auto_Billing {
 				self::attempt_charge_invoice_balance( $invoice_id, $client_id );
 			}
 		}
-		update_option( $option_key, current_time( 'timestamp' ) );
 	}
 
 }

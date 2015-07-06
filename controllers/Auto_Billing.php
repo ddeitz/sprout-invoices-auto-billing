@@ -8,6 +8,7 @@
  */
 class SI_Auto_Billing extends SI_Controller {
 	const AUTOBILL_OPTION = 'sc_allow_auto_bill';
+	const INVOICE_AUTOBILL_INVOICE = 'si_attempt_auto_charge';
 	const CHARGE_OPTION = 'sc_allow_charging';
 	const RECORD = 'auto_payments';
 
@@ -106,6 +107,24 @@ class SI_Auto_Billing extends SI_Controller {
 
 	public static function clear_option_to_charge_client( $client_id ) {
 		update_post_meta( $client_id, self::CHARGE_OPTION, '' );
+	}
+
+	/**
+	 * Can the invoice be auto billed
+	 * @param  int $client_id
+	 * @return bool
+	 */
+	public static function can_auto_bill_invoice( $invoice_id ) {
+		$option = get_post_meta( $invoice_id, self::INVOICE_AUTOBILL_INVOICE, true );
+		return (bool) $option;
+	}
+
+	public static function set_to_auto_bill_invoice( $invoice_id ) {
+		update_post_meta( $invoice_id, self::INVOICE_AUTOBILL_INVOICE, true );
+	}
+
+	public static function clear_option_to_auto_bill_invoice( $invoice_id ) {
+		delete_post_meta( $invoice_id, self::INVOICE_AUTOBILL_INVOICE );
 	}
 
 	//////////////

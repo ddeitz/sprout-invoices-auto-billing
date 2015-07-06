@@ -8,7 +8,6 @@
  */
 class SI_Auto_Billing_Admin extends SI_Auto_Billing {
 	const AJAX_ACTION = 'si_attempt_auto_charge';
-	const META_AUTO_BILL_INVOICE = 'si_attempt_auto_charge';
 
 	public static function init() {
 
@@ -128,7 +127,7 @@ class SI_Auto_Billing_Admin extends SI_Auto_Billing {
 		if ( ! is_a( $invoice, 'SI_Invoice' ) ) {
 			return;
 		}
-		$option = get_post_meta( $invoice->get_id(), self::AUTOBILL_OPTION, true );
+		$option = self::can_auto_bill_invoice( $invoice->get_id() );
 		self::load_addon_view( 'admin/meta-boxes/invoices/auto-billing-option.php', array(
 				'auto_bill' => $option,
 				'invoice_id' => $invoice->get_id(),
@@ -141,7 +140,10 @@ class SI_Auto_Billing_Admin extends SI_Auto_Billing {
 		if ( get_post_type( $post_id ) !== SI_Invoice::POST_TYPE ) {
 			return;
 		}
-		$auto_bill = ( isset( $_POST['attempt_auto_bill'] ) ) ? 1 : 0 ;
-		update_post_meta( $post_id, self::AUTOBILL_OPTION, $auto_bill );
+		self::clear_option_to_auto_bill_invoice( $post_id );
+		if ( ! isset( $_POST['attempt_auto_bill'] ) ) {
+			return;
+		}
+		self::set_to_auto_bill_invoice( $post_id );
 	}
 }

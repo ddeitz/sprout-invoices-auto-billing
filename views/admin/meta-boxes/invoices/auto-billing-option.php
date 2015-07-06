@@ -12,7 +12,7 @@
 		<div class="attempt-auto-bill-wrap">
 			<label for="attempt_auto_bill" class="sa-checkbox">
 				<span class="sa-form-field sa-form-field-checkbox">
-					<input type="checkbox" name="attempt_auto_bill" id="attempt_auto_bill" value="Attempt" class="checkbox" <?php checked( (int) $auto_bill, 1, true) ?>>
+					<input type="checkbox" name="attempt_auto_bill" id="attempt_auto_bill" value="Attempt" class="checkbox" <?php checked( $auto_bill, true, true) ?>>
 				</span>
 				<?php self::_e( 'Attempt an automatic payment on the invoice due date <em>if the client has a payment profile setup</em>.' ) ?>
 			</label>
