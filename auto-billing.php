@@ -30,12 +30,16 @@ function sa_load_auto_billing_addon() {
 	require_once( 'controllers/Auto_Billing_Checkout.php' );
 	require_once( 'controllers/Auto_Billing_Clients.php' );
 	require_once( 'controllers/Auto_Billing_Shortcodes.php' );
+	require_once( 'controllers/Auto_Billing_Notifications.php' );
+	require_once( 'controllers/Auto_Billing_Cron.php' );
 
 	SI_Auto_Billing::init();
 	SI_Auto_Billing_Admin::init();
 	SI_Auto_Billing_Checkout::init();
 	SI_Auto_Billing_Client::init();
 	SI_Auto_Billing_Shortcodes::init();
+	SI_Auto_Billing_Notifications::init();
+	SI_Auto_Billing_Cron::init();
 }
 
 add_action( 'si_payment_processors_loaded', 'sa_load_authnetcim_processor' );

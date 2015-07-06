@@ -97,7 +97,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		add_filter( 'si_checkout_pages', array( $this, 'remove_review_checkout_page' ) );
 
 		// Checkout template updates
-		add_action( 'si_head', array( $this, 'credit_card_cim_js' ) );
+		add_action( 'si_head', array( get_class(), 'credit_card_cim_js' ) );
 		add_filter( 'sa_credit_fields', array( $this, 'add_cim_options' ), 100, 2 );
 		add_action( 'si_credit_card_payment_fields', array( $this, 'add_checking_info' ) );
 
@@ -151,7 +151,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	 * @return array
 	 */
 	public function remove_review_checkout_page( $pages ) {
-		unset( $pages[SI_Checkouts::REVIEW_PAGE] );
+		unset( $pages[ SI_Checkouts::REVIEW_PAGE ] );
 		return $pages;
 	}
 
@@ -428,7 +428,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 				};
 
 				hideBankFields = function() {
-					jQuery('[for="si_credit_store_payment_profile"]').show().attr( 'required', true );
+					jQuery('label[for="sa_credit_store_payment_profile"]').show().attr( 'required', true );
 					jQuery('#sa_credit_cc_number').show().attr( 'required', true );
 					jQuery('#sa_credit_cc_name').show().attr( 'required', true );
 					jQuery('#sa_credit_cc_expiration_month').show().attr( 'required', true );
@@ -436,12 +436,12 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 					jQuery('#sa_credit_cc_cvv').show().attr( 'required', true );
 					jQuery('#sa_bank_bank_routing').hide().removeAttr( 'required' );
 					jQuery('#sa_bank_bank_account').hide().removeAttr( 'required' );
-					jQuery('[for="si_bank_store_payment_profile"]').hide().removeAttr( 'required' );
+					jQuery('label[for="sa_bank_store_payment_profile"]').hide().removeAttr( 'required' );
 					return true;
 				};
 
 				hideCCFields = function() {
-					jQuery('[for="si_bank_store_payment_profile"]').show().attr( 'required', true );
+					jQuery('label[for="sa_bank_store_payment_profile"]').show().attr( 'required', true );
 					jQuery('#sa_bank_bank_routing').show().attr( 'required', true );
 					jQuery('#sa_bank_bank_account').show().attr( 'required', true );
 					jQuery('#sa_credit_cc_number').hide().removeAttr( 'required' );
@@ -449,7 +449,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 					jQuery('#sa_credit_cc_expiration_month').hide().removeAttr( 'required' );
 					jQuery('#sa_credit_cc_expiration_year').hide().removeAttr( 'required' );
 					jQuery('#sa_credit_cc_cvv').hide().removeAttr( 'required' );
-					jQuery('[for="si_credit_store_payment_profile"]').hide().removeAttr( 'required' );
+					jQuery('label[for="sa_credit_store_payment_profile"]').hide().removeAttr( 'required' );
 					return true;
 				};
 
@@ -479,6 +479,12 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 			span.sa-form-field-radio.clearfix {
 			    display: block;
 			}
+			#credit_card_fields span.sa-form-field-radio.clearfix {
+				display: block;
+				margin-bottom: 5px;
+				padding: 10px 5px;
+				background-color: #eee;
+			}
 
 			.sa-form-aligned .sa-control-group .sa-form-field-radio label {
 			    text-align: left;
@@ -504,6 +510,10 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 			}
 			.sa-form-field-bypass legend {
 				margin-top: 20px;
+			}
+			span.sa-form-field.sa-form-field-checkbox {
+				display: inline-block;
+				margin-right: 10px;
 			}
 		</style>
 		<?php
@@ -544,7 +554,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 						<?php endif ?>
 						<span class="sa-form-field-radio clearfix">
 							<label for="sa_credit_payment_method_credit">
-							<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_credit" value="new_credit" checked="checked"><?php self::_e( 'New credit card:' ) ?></label>
+							<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_credit" value="new_credit" checked="checked"><b><?php self::_e( 'New Credit Card' ) ?></b></label>
 						</span>
 					</span>
 				</span>
@@ -568,7 +578,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		$bank_fields['section_heading'] = array(
 			'type' => 'bypass',
 			'weight' => 1,
-			'output' => sprintf( '<span class="sa-form-field-radio clearfix"><label for="sa_credit_payment_method_bank"><input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_bank" value="new_bank">%s</label></span>', self::__( 'New checking account:' ) ),
+			'output' => sprintf( '<span class="sa-form-field-radio clearfix"><label for="sa_credit_payment_method_bank"><input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_bank" value="new_bank"><b>%s</b></label></span>', self::__( 'New Checking Account' ) ),
 		);
 		$bank_fields['bank_routing'] = array(
 			'type' => 'text',
@@ -1003,7 +1013,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		$payment->set_status( SI_Payment::STATUS_COMPLETE );
 		do_action( 'payment_complete', $payment );
 
-		return $payment_id;
+		return (int) $payment_id;
 	}
 
 	public static function filter_client_payment_profiles( $payment_card_profiles = array(), $client_id = 0 ) {

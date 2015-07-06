@@ -25,10 +25,16 @@ class SI_Auto_Billing extends SI_Controller {
 	public static function attempt_charge_invoice_balance( $invoice_id, $client_id ) {
 		$payment_profile_id = self::get_option_to_charge_client( $client_id );
 		if ( ! is_numeric( $payment_profile_id ) ) {
+			do_action( 'sc_ab_attempt_charge_failed', $payment_profile_id, 0, $invoice_id, $client_id );
 			return self::__( 'Client not setup for automatic payments.' );
 		}
-		$response = SI_AuthorizeNet_CIM::cim_payment( $invoice_id, $payment_profile_id ); // TODO be independent for other processors
-		return $response;
+		$payment_id = SI_AuthorizeNet_CIM::cim_payment( $invoice_id, $payment_profile_id ); // TODO be independent for other processors
+		if ( ! is_numeric( $payment_id ) ) {
+			do_action( 'sc_ab_attempt_charge_failed', $payment_profile_id, $payment_id, $invoice_id, $client_id );
+			return self::__( 'Client not setup for automatic payments.' );
+		}
+		do_action( 'sc_ab_attempt_charge', $payment_profile_id, $payment_id, $invoice_id, $client_id );
+		return $payment_id;
 	}
 
 	//////////////////
