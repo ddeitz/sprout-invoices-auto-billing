@@ -21,7 +21,7 @@ class SI_Auto_Billing_Cron extends SI_Auto_Billing {
 		$recently_overdue = SI_Invoice::get_overdue_invoices( $start_due_date );
 		if ( ! empty( $recently_overdue ) ) { // no overdue invoices.
 			foreach ( $recently_overdue as $invoice_id ) {
-				$attempt_option = get_post_meta( $invoice_id, SI_Auto_Billing_Admin::AUTOBILL_OPTION, true );
+				$attempt_option = get_post_meta( $invoice_id, SI_Auto_Billing_Admin::INVOICE_AUTOBILL_INVOICE, true );
 				if ( ! $attempt_option ) {
 					continue;
 				}
