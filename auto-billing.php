@@ -1,7 +1,7 @@
 <?php
 /*
-Plugin Name: Sprout Invoices Add-on - Auto Payments
-Plugin URI: https://sproutapps.co/marketplace/auto-payments/
+Plugin Name: Sprout Invoices Add-on - Auto Billing & Payment Profiles
+Plugin URI: https://sproutapps.co/marketplace/auto-billing-invoices-payment-profiles/
 Description: A way to automatically charge clients via credit cards or bank accounts. Supports Authorize.net CIM.
 Author: Sprout Apps
 Version: 1
@@ -12,8 +12,8 @@ Author URI: https://sproutapps.co
  * Plugin Info for updates
  */
 define( 'SA_ADDON_AUTO_BILLING_VERSION', '1' );
-define( 'SA_ADDON_AUTO_BILLING_DOWNLOAD_ID', 1111 );
-define( 'SA_ADDON_AUTO_BILLING_NAME', 'Sprout Invoices Auto Payments' );
+define( 'SA_ADDON_AUTO_BILLING_DOWNLOAD_ID', 44588 );
+define( 'SA_ADDON_AUTO_BILLING_NAME', 'Sprout Invoices Auto Billing & Payment Profiles' );
 define( 'SA_ADDON_AUTO_BILLING_FILE', __FILE__ );
 define( 'SA_ADDON_AUTO_BILLING_PATH', dirname( __FILE__ ) );
 define( 'SA_ADDON_AUTO_BILLING_URL', plugins_url( '', __FILE__ ) );
@@ -51,13 +51,10 @@ function sa_load_authnetcim_processor() {
 	require_once( 'payment-processors/authorize-net-cim/SA_AuthorizeNet_CIM.php' );
 }
 
-if ( ! apply_filters( 'is_bundle_addon', false ) ) {
-	if ( SI_DEV ) { error_log( 'not bundled: sa_load_auto_billing_updates' ); }
-	// Load up the updater after si is completely loaded
-	add_action( 'sprout_invoices_loaded', 'sa_load_auto_billing_updates' );
-	function sa_load_auto_billing_updates() {
-		if ( class_exists( 'SI_Updates' ) ) {
-			require_once( 'inc/sa-updates/SA_Updates.php' );
-		}
+// Load up the updater after si is completely loaded
+add_action( 'sprout_invoices_loaded', 'sa_load_auto_billing_updates' );
+function sa_load_auto_billing_updates() {
+	if ( class_exists( 'SI_Updates' ) ) {
+		require_once( 'inc/sa-updates/SA_Updates.php' );
 	}
 }
