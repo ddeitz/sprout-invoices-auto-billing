@@ -27,7 +27,7 @@
 				<?php foreach ( $payment_profiles as $payment_profile_id => $name ) : ?>
 					<span class="sa-form-field-radio clearfix">
 						<label for="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>">
-							<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>" value="<?php echo (int) $payment_profile_id ?>" <?php checked( (int) $default_payment_profile_id, (int) $payment_profile_id ) ?>><?php printf( '%1$s <a href="javascript:void(0)" data-ref="%2$s" data-client-id="%4$s" class="cim_delete_card" title="%3$s"><span class="dashicons dashicons-trash"></span></a>', $name, (int) $payment_profile_id, self::__( 'Remove this CC from your account.' ), (int) $client_id ) ?>
+							<input type="radio" name="sa_credit_payment_method" id="sa_credit_payment_method_<?php echo (int) $payment_profile_id ?>" value="<?php echo (int) $payment_profile_id ?>" <?php checked( (int) $default_payment_profile_id, (int) $payment_profile_id ) ?>><?php printf( '%1$s <a href="javascript:void(0)" data-ref="%2$s" data-client-id="%4$s" class="cim_delete_card sa_icon_link" title="%3$s"><span class="dashicons dashicons-trash"></span></a>', $name, (int) $payment_profile_id, self::__( 'Remove this CC from your account.' ), (int) $client_id ) ?>
 						</label>
 					</span>
 				<?php endforeach ?>

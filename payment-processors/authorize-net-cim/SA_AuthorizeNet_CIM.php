@@ -86,7 +86,7 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 		// Not set since the init_authrequest needs and does it.
 		// self::$api_username = get_option( self::API_USERNAME_OPTION, '' );
 		// self::$api_password = get_option( self::API_PASSWORD_OPTION, '' );
-		
+
 		self::$api_mode = get_option( self::API_MODE_OPTION, self::MODE_TEST );
 
 		if ( is_admin() ) {
