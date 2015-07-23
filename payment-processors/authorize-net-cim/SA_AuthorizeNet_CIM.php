@@ -387,7 +387,12 @@ class SI_AuthorizeNet_CIM extends SI_Credit_Card_Processors {
 	// checkout page //
 	///////////////////
 
-	public function credit_card_cim_js() { ?>
+	public static function credit_card_cim_js() {
+		if ( 'estimate' === si_get_doc_context() ) {
+			return;
+		}
+
+		?>
 		<script type="text/javascript" charset="utf-8">
 			jQuery(document).ready(function() {
 				jQuery('.cim_delete_card').on( 'click', function(event){
